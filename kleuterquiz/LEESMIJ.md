@@ -2,9 +2,6 @@
 
 Leeromgeving voor 3BSO Zorg en Welzijn. Leerlingen werken per 2 en maken zelfstandig een klikbare quiz voor kleuters in PowerPoint.
 
-- **Les 1–3:** bouwen (10 + 8 + 9 stappen), alles stap voor stap uitgelegd.
-- **Les 4:** elkaars quiz spelen, feedback geven en terugblikken.
-
 ## Bestanden
 
 | Bestand | Wat |
@@ -12,20 +9,41 @@ Leeromgeving voor 3BSO Zorg en Welzijn. Leerlingen werken per 2 en maken zelfsta
 | `index.html` | De pagina voor de leerlingen |
 | `leerkracht.html` | Jouw pagina om te beoordelen (staat nergens gelinkt op de leerlingenpagina) |
 | `data.js` | Alle teksten van de lessen en stappen. Pas hier aan wat je wil. |
+| `nakijken.js` | De automatische nakijker (vragen en PowerPoint) |
+| `lib/jszip.min.js` | Hulpprogramma om .pptx-bestanden te openen (MIT-licentie) |
 | `beelden.js` | Tekent de schermbeelden van PowerPoint bij de stappen |
 | `app.js`, `style.css` | De werking en de opmaak |
 
 ## Zo werkt het
 
-1. De leerlingen openen de site, vullen hun klas en namen in en werken de stappen af.
-2. Bij elke stap zien ze wie aan de muis zit (wisselt elke stap), de uitleg, hoe jij de stap nakijkt, en een korte zelfcontrole. Pas als alles is aangevinkt kunnen ze op **Stap klaar** klikken. Het tijdstip wordt bewaard.
-3. Op het einde van elke les klikken ze op **Download ons rapport** en leveren dat bestand in (bv. via OneDrive of een Teams-opdracht). Volgende les kunnen ze met dat bestand verder werken, ook op een andere pc.
-4. Jij opent `leerkracht.html`, leest de rapporten in (meerdere tegelijk mag), ziet per stap of en wanneer die is afgevinkt, opent hun PowerPoint (die ze in stap 1.4 met jou delen) en geeft per stap **0** (niet gedaan), **1** (deels correct) of **2** (correct). Opmerkingen per stap kan ook.
-5. **Exporteer alle scores** geeft een CSV-bestand dat je in Excel opent: per duo alle stappen, het totaal per les en het eindtotaal (max. 60 punten).
+- **Les 1–3:** bouwen (12 + 10 + 10 stappen). **Les 4:** elkaars quiz spelen, de eigen quiz verbeteren en terugblikken.
+- In stap 1.1 kiezen de leerlingen een thema én de leeftijd van de kleuters (3 tot maximum 6 jaar). Hoe jonger, hoe strenger de regels voor hun vragen.
+- Op het einde van elke les kiezen ze hun PowerPoint-bestand in de site. De computer opent het bestand in de browser, kijkt elke stap na en geeft meteen punten (0, 1 of 2) en feedback. Het bestand wordt nergens naartoe gestuurd.
+- Daarna downloaden ze hun rapport (.json) en leveren het in. Jij leest de rapporten in op `leerkracht.html` en ziet meteen per stap de score en de feedback. Je kan elke score nog aanpassen. **Exporteer alle scores** geeft een bestand voor Excel.
 
-Let op: alles wordt bewaard in de browser (geen server). Je scores staan dus alleen op de computer en de browser waar je ze ingaf. Exporteer regelmatig.
+### Wat de computer nakijkt
 
-Online zetten: zie de LEESMIJ.md in de hoofdmap.
+| Wat | Hoe |
+| --- | --- |
+| Vragen (1.2) | Lengte volgens de gekozen leeftijd, vraagteken, hoofdletter, moeilijke woorden, 3 verschillende antwoorden van max. 4 woorden, juiste antwoord niet al in de vraag, waarom-zin, passend bij het thema (lijst met themawoorden), wisselende plaats van de juiste prent, geen ongepaste woorden |
+| PowerPoint (les 1–3) | Bestandsnaam, ontwerp, tekengroottes, indelingen, aantal en grootte van de prenten, uitlijning, afbeeldingsstijl, notities, volgorde van de 14 dia's, elke koppeling (juist, fout, Verder, Nog eens, Start, Speel), waarom-zinnen, ingesproken vragen (automatisch en verborgen), animaties, overgangen, applaus, kiosk-modus, alternatieve tekst |
+| Les 4 | Feedback aan andere duo's (top en tip), opnieuw inleveren, terugblik |
+| Niet automatisch | 1.4 (delen) en 2.1 (bestand openen): die tellen als de leerlingen ze zelf afvinken |
+
+De thema-controle werkt met een lijst van woorden per thema (in `nakijken.js`, bij `THEMAWOORDEN`). Een vraag zonder enig themawoord krijgt feedback. Het is geen echte taalcontrole: een rare maar correct gespelde vraag met themawoorden komt erdoor. Kijk dus af en toe even naar de tabel "Hun 5 vragen" op je leerkrachtpagina.
+
+### Zelf typen
+
+Op de leerlingenpagina kan je niet kopiëren, plakken of tekst slepen. Probeert een leerling het toch, dan verschijnt "Typ het zelf!" en wordt de poging geteld. Jij ziet dat aantal op je leerkrachtpagina. Overtypen van een ChatGPT-antwoord kan een website niet tegenhouden, maar ze moeten het wel zelf typen.
+
+### Rapporten inleveren
+
+Zonder server kan de site de rapporten niet zelf naar jou sturen. Twee manieren:
+
+1. Via een Teams-opdracht of een gedeelde OneDrive-map: de leerlingen uploaden hun rapport daar.
+2. Via Microsoft Forms: maak een formulier met een vraag **Bestand uploaden**. Zet de link in `data.js` bij `INLEVERLINK`. Dan verschijnt er een knop **Rapport inleveren** op de site. Alle rapporten komen automatisch in jouw OneDrive.
+
+Een rapport dat na het downloaden werd aangepast, krijgt een waarschuwing op je leerkrachtpagina.
 
 ## Schermbeelden
 

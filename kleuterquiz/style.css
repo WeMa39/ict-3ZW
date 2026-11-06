@@ -284,3 +284,21 @@ figure.beeld figcaption { font-size: .88rem; color: var(--zacht); margin-top: 6p
   .pp-vlinks { width: auto; flex-direction: row; flex-wrap: wrap; }
   .pp-titel .pp-naam { display: none; }
 }
+
+/* ───────── Nakijken, inleveren en zelf typen ───────── */
+body { -webkit-user-select: none; user-select: none; }
+input, textarea, select { -webkit-user-select: text; user-select: text; }
+.plakmelding { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(120px); background: #c0392b; color: #fff; padding: 12px 20px; border-radius: 999px; font-weight: 600; transition: transform .25s; z-index: 50; max-width: calc(100% - 32px); text-align: center; }
+.plakmelding.zichtbaar { transform: translateX(-50%) translateY(0); }
+.resultaat { border-radius: 8px; padding: 10px 12px; margin: 12px 0; font-size: .95rem; }
+.resultaat ul { margin: 6px 0 0; padding-left: 20px; }
+.r-twee { background: var(--groen-licht); }
+.r-een { background: #fff1d6; }
+.r-nul { background: #fbe1de; }
+.badge.punt.p2 { background: var(--groen-licht); color: var(--groen); }
+.badge.punt.p1 { background: #fff1d6; color: #a35a00; }
+.badge.punt.p0 { background: #fbe1de; color: #c0392b; }
+td.sc { font-weight: 700; white-space: nowrap; }
+td.sc.p2 { color: var(--groen); } td.sc.p1 { color: #a35a00; } td.sc.p0 { color: #c0392b; }
+.inleveren { margin: 12px 0; }
+.inleveren .knop { cursor: pointer; }

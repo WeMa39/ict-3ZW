@@ -1,44 +1,60 @@
-// Leerlingenpagina: stap-voor-stap lessen, voortgang en rapport.
+// Leerlingenpagina: stap-voor-stap lessen, automatisch nakijken, voortgang en rapport.
 (function () {
   const OPSLAG = "kleuterquiz-leerling-v1";
   const app = document.getElementById("app");
   const duoLabel = document.getElementById("duo-label");
 
+  const legeVraag = () => ({ vraag: "", juist: "", fout1: "", fout2: "", waarom: "", plaats: "" });
   function leeg() {
     return {
-      versie: 1,
-      klas: "",
-      namen: ["", ""],
-      thema: "",
-      vragen: Array.from({ length: 5 }, () => ({ vraag: "", juist: "", fout1: "", fout2: "", plaats: "" })),
-      stappen: {},
-      feedback: {},
+      versie: 1, klas: "", namen: ["", ""], thema: "", leeftijd: "",
+      vragen: Array.from({ length: 5 }, legeVraag),
+      stappen: {}, auto: {}, controles: {}, feedback: {},
       reflectie: REFLECTIE_VRAGEN.map(() => ""),
+      getypt: { geblokkeerd: 0, verdacht: 0 },
       les: 1,
     };
   }
-
+  function aanvullen(s) {
+    const n = Object.assign(leeg(), s);
+    n.vragen = (n.vragen || []).map((v) => Object.assign(legeVraag(), v));
+    while (n.vragen.length < 5) n.vragen.push(legeVraag());
+    n.auto = n.auto || {}; n.controles = n.controles || {}; n.getypt = Object.assign({ geblokkeerd: 0, verdacht: 0 }, n.getypt);
+    return n;
+  }
   function laad() {
-    try {
-      const s = JSON.parse(localStorage.getItem(OPSLAG));
-      if (s && s.versie === 1) return Object.assign(leeg(), s);
-    } catch (e) {}
+    try { const s = JSON.parse(localStorage.getItem(OPSLAG)); if (s && s.versie === 1) return aanvullen(s); } catch (e) {}
     return leeg();
   }
   let st = laad();
   let openStap = null;
-
-  function bewaar() {
-    try { localStorage.setItem(OPSLAG, JSON.stringify(st)); } catch (e) {}
-  }
+  const bewaar = () => { try { localStorage.setItem(OPSLAG, JSON.stringify(st)); } catch (e) {} };
 
   const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const tijd = (iso) => new Date(iso).toLocaleString("nl-BE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const stapInfo = (id) => (st.stappen[id] = st.stappen[id] || { checks: [], klaar: null });
 
-  function stapInfo(id) {
-    if (!st.stappen[id]) st.stappen[id] = { checks: [], klaar: null };
-    return st.stappen[id];
+  // ───────── Zelf typen: plakken, slepen en kopiëren blokkeren ─────────
+  let melding;
+  function meld(t) {
+    if (!melding) { melding = document.createElement("div"); melding.className = "plakmelding"; document.body.appendChild(melding); }
+    melding.textContent = t; melding.classList.add("zichtbaar");
+    clearTimeout(meld.t); meld.t = setTimeout(() => melding.classList.remove("zichtbaar"), 2500);
   }
+  const blokkeer = (e) => { e.preventDefault(); st.getypt.geblokkeerd++; bewaar(); meld("Kopiëren en plakken kan hier niet. Typ het zelf!"); };
+  ["paste", "drop", "copy", "cut"].forEach((ev) => document.addEventListener(ev, blokkeer, true));
+  document.addEventListener("dragstart", (e) => e.preventDefault(), true);
+  document.addEventListener("contextmenu", (e) => e.preventDefault(), true);
+  document.addEventListener("beforeinput", (e) => { if (/^insertFrom(Paste|Drop|Yank)/.test(e.inputType || "")) blokkeer(e); }, true);
+  const lengtes = new WeakMap();
+  document.addEventListener("input", (e) => {
+    const el = e.target;
+    if (!el.matches || !el.matches("input[type=text], textarea")) return;
+    const oud = lengtes.get(el) ?? 0, nieuw = el.value.length;
+    if (nieuw - oud > 12 && !/^insert(Text|CompositionText)$/.test(e.inputType || "")) { st.getypt.verdacht++; bewaar(); }
+    lengtes.set(el, nieuw);
+  }, true);
+  document.addEventListener("focusin", (e) => { if (e.target.matches && e.target.matches("input, textarea")) lengtes.set(e.target, e.target.value.length); });
 
   // ───────── Startscherm ─────────
   function toonStart() {
@@ -46,13 +62,13 @@
     app.innerHTML = `
       <div class="kaart">
         <h2>Welkom!</h2>
-        <p>In 3 lessen maken jullie met z'n tweeën een klikbare quiz voor kleuters in PowerPoint. In de 4de les spelen jullie elkaars quiz. Alles wat je moet doen, staat hier stap voor stap uitgelegd.</p>
-        <p>Werk de stappen in volgorde af. Bij elke stap zie je hoe je leerkracht ze nakijkt. Vink pas iets aan als het echt klaar is.</p>
+        <p>In 3 lessen maken jullie met z'n tweeën een klikbare quiz voor kleuters in PowerPoint. In de 4de les spelen jullie elkaars quiz en verbeteren jullie je eigen quiz. Alles wat je moet doen, staat hier stap voor stap uitgelegd.</p>
+        <p>Werk de stappen in volgorde af. Op het einde van elke les leveren jullie je PowerPoint in. De computer kijkt het na en jullie krijgen meteen feedback.</p>
         <label for="klas">Klas</label>
-        <input type="text" id="klas" value="${esc(st.klas)}" placeholder="bv. 3ZW">
+        <input type="text" id="klas" value="${esc(st.klas)}" placeholder="bv. 3ZW" autocomplete="off">
         <div class="rij2">
-          <div><label for="n1">Voornaam en naam leerling 1</label><input type="text" id="n1" value="${esc(st.namen[0])}"></div>
-          <div><label for="n2">Voornaam en naam leerling 2</label><input type="text" id="n2" value="${esc(st.namen[1])}"></div>
+          <div><label for="n1">Voornaam en naam leerling 1</label><input type="text" id="n1" value="${esc(st.namen[0])}" autocomplete="off"></div>
+          <div><label for="n2">Voornaam en naam leerling 2</label><input type="text" id="n2" value="${esc(st.namen[1])}" autocomplete="off"></div>
         </div>
         <p style="margin-top:16px"><button id="start">Starten</button></p>
       </div>
@@ -65,8 +81,7 @@
       st.klas = document.getElementById("klas").value.trim();
       st.namen = [document.getElementById("n1").value.trim(), document.getElementById("n2").value.trim()];
       if (!st.klas || !st.namen[0] || !st.namen[1]) { alert("Vul je klas en allebei jullie namen in."); return; }
-      bewaar();
-      toonLes();
+      bewaar(); toonLes();
     };
     document.getElementById("herstel").onchange = herstel;
   }
@@ -75,22 +90,14 @@
     const f = ev.target.files[0];
     if (!f) return;
     f.text().then((t) => {
-      try {
-        const s = JSON.parse(t);
-        if (!s || s.versie !== 1) throw new Error();
-        st = Object.assign(leeg(), s);
-        bewaar();
-        toonLes();
-      } catch (e) {
-        alert("Dit bestand is geen rapport van de kleuterquiz.");
-      }
+      try { const s = JSON.parse(t); if (!s || s.versie !== 1) throw new Error(); st = aanvullen(s); bewaar(); toonLes(); }
+      catch (e) { alert("Dit bestand is geen rapport van de kleuterquiz."); }
     });
   }
 
   // ───────── Lespagina ─────────
-  function telKlaar(les) {
-    return les.stappen.filter((s) => st.stappen[s.id] && st.stappen[s.id].klaar).length;
-  }
+  const telKlaar = (les) => les.stappen.filter((s) => st.stappen[s.id] && st.stappen[s.id].klaar).length;
+  const punten = (les) => les.stappen.reduce((t, s) => t + (st.auto[s.id]?.score ?? 0), 0);
 
   function toonLes() {
     duoLabel.textContent = `${st.klas} · ${st.namen[0]} & ${st.namen[1]}`;
@@ -101,6 +108,7 @@
     }
     const klaar = telKlaar(les);
     const pct = Math.round((klaar / les.stappen.length) * 100);
+    const nagekeken = les.stappen.some((s) => st.auto[s.id]);
 
     app.innerHTML = `
       <nav class="tabs" aria-label="Lessen">
@@ -110,27 +118,26 @@
         <h2>Les ${les.nr}: ${esc(les.titel)}</h2>
         <p>${esc(les.intro)}</p>
         <div class="voortgang" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><div style="width:${pct}%"></div></div>
-        <div class="voortgang-tekst">${klaar} van ${les.stappen.length} stappen klaar</div>
+        <div class="voortgang-tekst">${klaar} van ${les.stappen.length} stappen klaar${nagekeken ? ` · nagekeken: ${punten(les)} van ${les.stappen.length * 2} punten` : ""}</div>
         ${les.schema ? schemaSVG() : ""}
       </div>
       ${les.stappen.map((s, i) => stapHTML(s, i, les)).join("")}
       <div class="kaart geen-print">
         <h3>Rapport</h3>
-        <p class="klein-tekst">Download op het einde van elke les jullie rapport en bewaar het op OneDrive. Zo kan je leerkracht zien welke stappen jullie gedaan hebben, en kunnen jullie volgende les verder werken, ook op een andere computer.</p>
+        <p class="klein-tekst">Download op het einde van elke les jullie rapport en lever het in. Zo ziet je leerkracht jullie punten en feedback, en kunnen jullie volgende les verder werken, ook op een andere computer.</p>
         <div class="rapport-knoppen">
           <button id="download">Download ons rapport</button>
+          ${INLEVERLINK ? `<a class="knop" href="${esc(INLEVERLINK)}" target="_blank" rel="noopener">Rapport inleveren</a>` : ""}
           <button class="tweede" id="opnieuw">Ander duo / opnieuw beginnen</button>
         </div>
       </div>`;
 
     app.querySelectorAll("[data-les]").forEach((b) => (b.onclick = () => { st.les = +b.dataset.les; openStap = null; bewaar(); toonLes(); window.scrollTo(0, 0); }));
     app.querySelectorAll(".stap-kop").forEach((k) => (k.onclick = () => { const id = k.parentElement.dataset.id; openStap = openStap === id ? null : id; toonLes(); }));
-    les.stappen.forEach((s) => koppelStap(s));
+    les.stappen.forEach((s) => koppelStap(s, les));
     document.getElementById("download").onclick = download;
     document.getElementById("opnieuw").onclick = () => {
-      if (confirm("Alles wissen op deze computer en opnieuw beginnen? Download eerst jullie rapport als je het nog nodig hebt.")) {
-        st = leeg(); openStap = null; bewaar(); toonStart();
-      }
+      if (confirm("Alles wissen op deze computer en opnieuw beginnen? Download eerst jullie rapport als je het nog nodig hebt.")) { st = leeg(); openStap = null; bewaar(); toonStart(); }
     };
     if (openStap) {
       const el = app.querySelector(`.stap[data-id="${CSS.escape(openStap)}"]`);
@@ -138,28 +145,39 @@
     }
   }
 
+  function resultaatHTML(id) {
+    const a = st.auto[id];
+    if (!a) return "";
+    const kleur = ["nul", "een", "twee"][a.score];
+    return `<div class="resultaat r-${kleur}"><b>Nagekeken: ${a.score}/2</b>${a.zelf ? " (zelfcontrole)" : ""}<ul>${a.fb.map((f) => `<li>${esc(f)}</li>`).join("")}</ul></div>`;
+  }
+
   function stapHTML(s, i, les) {
     const info = stapInfo(s.id);
     const isOpen = openStap === s.id;
     const muis = st.namen[i % 2], naast = st.namen[(i + 1) % 2];
+    const a = st.auto[s.id];
     return `
     <section class="kaart stap ${info.klaar ? "klaar" : ""} ${isOpen ? "open" : ""}" data-id="${s.id}">
       <div class="stap-kop" role="button" tabindex="0" aria-expanded="${isOpen}">
         <div class="stap-nr">${info.klaar ? "✓" : s.id}</div>
         <h3>${esc(s.titel)}</h3>
         ${s.nieuw ? '<span class="badge">Nieuw</span>' : ""}
-        ${info.klaar ? `<span class="badge ok">klaar ${tijd(info.klaar)}</span>` : ""}
+        ${a ? `<span class="badge punt p${a.score}">${a.score}/2</span>` : info.klaar ? `<span class="badge ok">klaar ${tijd(info.klaar)}</span>` : ""}
       </div>
       <div class="stap-body">
-        ${les.nr < 4 ? `<div class="rol">🖱️ Aan de muis: <b>${esc(muis)}</b> · 👀 Kijkt mee en leest voor: <b>${esc(naast)}</b></div>` : ""}
+        ${les.nr < 4 && s.type !== "inleveren" ? `<div class="rol">🖱️ Aan de muis: <b>${esc(muis)}</b> · 👀 Kijkt mee en leest voor: <b>${esc(naast)}</b></div>` : ""}
         <ol class="uitleg">${s.uitleg.map((u, j) => typeof u === "string" ? `<li>${u}</li>` : `<li>${u.t}${u.b && window.tekenBeeld ? window.tekenBeeld(u.b, s.id + "-" + (j + 1)) : ""}</li>`).join("")}</ol>
         ${s.voorbeeld ? `<div class="voorbeeld"><b>Voorbeeld:</b> ${esc(s.voorbeeld)}</div>` : ""}
         ${s.type === "thema" ? themaHTML() : ""}
         ${s.type === "vragen" ? vragenHTML() : ""}
+        ${s.type === "waarom" ? waaromHTML() : ""}
+        ${s.type === "inleveren" ? inleverHTML(s) : ""}
         ${s.type === "feedback" ? feedbackHTML(s.id) : ""}
         ${s.type === "reflectie" ? reflectieHTML() : ""}
         ${s.tip ? `<div class="tip"><b>Tip:</b> ${s.tip}</div>` : ""}
-        <div class="criterium"><b>Zo kijkt je leerkracht dit na (2 punten):</b> ${esc(s.criterium)}</div>
+        <div class="criterium"><b>Zo wordt dit nagekeken (2 punten):</b> ${esc(s.criterium)}</div>
+        ${s.type === "inleveren" ? "" : resultaatHTML(s.id)}
         <div class="checks">
           <b>Controleer jezelf:</b>
           ${s.check.map((c, j) => `<label><input type="checkbox" data-check="${j}" ${info.checks[j] ? "checked" : ""} ${info.klaar ? "disabled" : ""}> <span>${esc(c)}</span></label>`).join("")}
@@ -172,33 +190,58 @@
   }
 
   function themaHTML() {
-    return `<label for="thema">Ons thema</label>
+    return `<div class="rij2"><div><label for="thema">Ons thema</label>
       <select id="thema"><option value="">Kies een thema …</option>
-      ${THEMAS.map((t) => `<option ${st.thema === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
+      ${THEMAS.map((t) => `<option ${st.thema === t ? "selected" : ""}>${esc(t)}</option>`).join("")}</select></div>
+      <div><label for="leeftijd">Leeftijd van de kleuters</label>
+      <select id="leeftijd"><option value="">Kies een leeftijd …</option>
+      ${Object.entries(NK.LEEFTIJDEN).map(([k, v]) => `<option value="${k}" ${String(st.leeftijd) === k ? "selected" : ""}>${esc(v.label)}</option>`).join("")}</select></div></div>`;
   }
 
   function vragenHTML() {
-    return st.vragen.map((v, i) => `
+    const n = NK.LEEFTIJDEN[st.leeftijd];
+    const regels = n ? `<div class="tip"><b>Voor kinderen van ${st.leeftijd} jaar:</b> een vraag heeft maximum ${n.vraagMax} woorden, een waarom-zin maximum ${n.waaromMax} woorden, en gebruik geen woorden langer dan ${n.letterMax} letters.</div>` : `<div class="tip">Kies eerst een leeftijd in stap 1.1.</div>`;
+    return regels + st.vragen.map((v, i) => `
       <div class="vraag-blok">
         <label>Vraag ${i + 1}</label>
-        <input type="text" data-v="${i}" data-k="vraag" value="${esc(v.vraag)}" maxlength="80" placeholder="Korte vraag, max. 8 woorden">
+        <input type="text" data-v="${i}" data-k="vraag" value="${esc(v.vraag)}" maxlength="90" autocomplete="off" spellcheck="true">
         <div class="rij3">
-          <div><label>Juist antwoord</label><input type="text" data-v="${i}" data-k="juist" value="${esc(v.juist)}"></div>
-          <div><label>Fout antwoord 1</label><input type="text" data-v="${i}" data-k="fout1" value="${esc(v.fout1)}"></div>
-          <div><label>Fout antwoord 2</label><input type="text" data-v="${i}" data-k="fout2" value="${esc(v.fout2)}"></div>
+          <div><label>Juist antwoord</label><input type="text" data-v="${i}" data-k="juist" value="${esc(v.juist)}" autocomplete="off"></div>
+          <div><label>Fout antwoord 1</label><input type="text" data-v="${i}" data-k="fout1" value="${esc(v.fout1)}" autocomplete="off"></div>
+          <div><label>Fout antwoord 2</label><input type="text" data-v="${i}" data-k="fout2" value="${esc(v.fout2)}" autocomplete="off"></div>
         </div>
+        <label>Waarom is het juiste antwoord juist?</label>
+        <input type="text" data-v="${i}" data-k="waarom" value="${esc(v.waarom)}" maxlength="140" autocomplete="off">
         <label>Plaats van de juiste prent</label>
         <select data-v="${i}" data-k="plaats">
           ${["", "links", "midden", "rechts"].map((p) => `<option value="${p}" ${v.plaats === p ? "selected" : ""}>${p || "Kies …"}</option>`).join("")}
         </select>
-      </div>`).join("");
+      </div>`).join("") + `<p><button class="tweede" data-controleer>Controleer onze vragen</button></p>`;
+  }
+
+  function waaromHTML() {
+    return `<div class="voorbeeld"><b>Jullie waarom-zinnen:</b><ol>${st.vragen.map((v) => `<li>${esc(v.waarom) || "<i>nog niet ingevuld in stap 1.2</i>"}</li>`).join("")}</ol></div>`;
+  }
+
+  function inleverHTML(s) {
+    const c = st.controles[s.les];
+    const les = LESSEN.find((l) => l.nr === Math.min(s.les, 3));
+    const ids = LESSEN.filter((l) => l.nr <= Math.min(s.les, 3)).flatMap((l) => l.stappen.map((x) => x.id));
+    const rij = (id) => { const a = st.auto[id]; if (!a) return ""; const stp = LESSEN.flatMap((l) => l.stappen).find((x) => x.id === id); return `<tr><td><b>${id}</b> ${esc(stp.titel)}</td><td class="sc p${a.score}">${a.score}/2</td><td>${a.fb.map(esc).join("<br>")}</td></tr>`; };
+    return `<div class="inleveren">
+      <label class="knop" for="pptx-${s.id}">📂 Kies ons PowerPoint-bestand</label>
+      <input type="file" id="pptx-${s.id}" data-pptx="${s.les}" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" hidden>
+      <span class="klein-tekst" data-status></span>
+      ${c ? `<p class="klein-tekst">Laatst nagekeken: ${tijd(c.datum)} · bestand: ${esc(c.bestand)} · ${c.dias} dia's</p>
+        <div class="tabel-scroll"><table class="score"><tr><th>Stap</th><th>Punten</th><th>Feedback</th></tr>${(s.les === 4 ? ids : les.stappen.map((x) => x.id)).map(rij).join("")}${s.les === 4 ? rij("4.3") : ""}</table></div>` : ""}
+    </div>`;
   }
 
   function feedbackHTML(id) {
     const f = st.feedback[id] || { duo: "", checks: [], top: "", tip: "" };
     return `<div class="vraag-blok">
       <label>Van welk duo was de quiz?</label>
-      <input type="text" data-f="${id}" data-k="duo" value="${esc(f.duo)}" placeholder="Namen van het andere duo">
+      <input type="text" data-f="${id}" data-k="duo" value="${esc(f.duo)}" placeholder="Namen van het andere duo" autocomplete="off">
       <div class="checks">${FEEDBACK_VRAGEN.map((q, j) => `<label><input type="checkbox" data-f="${id}" data-fc="${j}" ${f.checks[j] ? "checked" : ""}> <span>${esc(q)}</span></label>`).join("")}</div>
       <label>Top: wat vonden jullie goed?</label>
       <textarea data-f="${id}" data-k="top">${esc(f.top)}</textarea>
@@ -212,35 +255,63 @@
   }
 
   function velden(s) {
-    // Wat moet ingevuld zijn voor een stap klaar mag?
-    if (s.type === "thema" && !st.thema) return "Kies eerst een thema.";
+    if (s.type === "thema" && (!st.thema || !st.leeftijd)) return "Kies een thema en een leeftijd.";
     if (s.type === "vragen") {
-      const leeg = st.vragen.some((v) => !v.vraag.trim() || !v.juist.trim() || !v.fout1.trim() || !v.fout2.trim() || !v.plaats);
-      if (leeg) return "Vul alle 5 de vragen volledig in.";
+      if (st.vragen.some((v) => !v.vraag.trim() || !v.juist.trim() || !v.fout1.trim() || !v.fout2.trim() || !v.waarom.trim() || !v.plaats)) return "Vul alle 5 de vragen volledig in, ook de waarom-zin.";
+      if (!st.auto["1.2"]) return "Klik eerst op Controleer onze vragen.";
     }
-    if (s.type === "feedback") {
-      const f = st.feedback[s.id];
-      if (!f || !f.duo.trim() || !f.top.trim() || !f.tip.trim()) return "Vul het duo, een top en een tip in.";
-    }
+    if (s.type === "inleveren" && !st.controles[s.les]) return "Kies eerst jullie PowerPoint-bestand om te laten nakijken.";
+    if (s.type === "feedback") { const f = st.feedback[s.id]; if (!f || !f.duo.trim() || !f.top.trim() || !f.tip.trim()) return "Vul het duo, een top en een tip in."; }
     if (s.type === "reflectie" && st.reflectie.some((r) => !r.trim())) return "Beantwoord alle vragen.";
     return "";
+  }
+
+  // Score voor stappen die niet uit de PowerPoint komen, bij Stap klaar.
+  function scoorBijKlaar(s) {
+    if (s.type === "thema") st.auto[s.id] = { score: 2, fb: [`Thema: ${st.thema}, leeftijd: ${st.leeftijd} jaar.`] };
+    else if (s.type === "vragen") st.auto[s.id] = NK.vragen(st);
+    else if (s.type === "feedback") st.auto[s.id] = NK.feedback(st.feedback[s.id]);
+    else if (s.type === "reflectie") st.auto[s.id] = NK.reflectie(st.reflectie);
+    else if (s.zelf) st.auto[s.id] = { score: 2, fb: ["Jullie hebben deze stap zelf afgevinkt."], zelf: true };
+  }
+
+  async function nakijken(input, s) {
+    const f = input.files[0];
+    if (!f) return;
+    const status = input.parentElement.querySelector("[data-status]");
+    status.textContent = "Even geduld, de computer kijkt jullie quiz na …";
+    try {
+      const vorigTotaal = st.controles[3] ? st.controles[3].totaal : null;
+      const res = await NK.pptx(await f.arrayBuffer(), f.name, st, s.les);
+      Object.entries(res.stappen).forEach(([id, r]) => (st.auto[id] = r));
+      st.auto["1.2"] = NK.vragen(st);
+      const totaal = Object.entries(st.auto).filter(([id]) => +id.split(".")[0] <= 3).reduce((t, [, a]) => t + a.score, 0);
+      if (s.les === 4) st.auto["4.3"] = vorigTotaal === null ? { score: 1, fb: ["Er is geen inzending van les 3 om mee te vergelijken."] } : totaal >= vorigTotaal ? { score: 2, fb: [`Opnieuw nagekeken: ${totaal} punten voor les 1 tot 3 (eerst ${vorigTotaal}).`] } : { score: 1, fb: [`Opnieuw nagekeken: ${totaal} punten, minder dan bij les 3 (${vorigTotaal}). Kijk de feedback na.`] };
+      st.controles[s.les] = { datum: new Date().toISOString(), bestand: f.name, dias: res.dias, totaal };
+      bewaar(); toonLes();
+    } catch (e) {
+      status.textContent = "Dit bestand kan ik niet openen. Kies jullie .pptx-bestand (niet een snelkoppeling of een ander bestand).";
+    }
   }
 
   function koppelStap(s) {
     const el = app.querySelector(`.stap[data-id="${CSS.escape(s.id)}"]`);
     if (!el || !el.classList.contains("open")) return;
     const info = stapInfo(s.id);
-
     el.querySelectorAll("[data-check]").forEach((c) => (c.onchange = () => { info.checks[+c.dataset.check] = c.checked; bewaar(); }));
-    const thema = el.querySelector("#thema");
+    const thema = el.querySelector("#thema"), lft = el.querySelector("#leeftijd");
     if (thema) thema.onchange = () => { st.thema = thema.value; bewaar(); };
+    if (lft) lft.onchange = () => { st.leeftijd = lft.value ? +lft.value : ""; bewaar(); };
     el.querySelectorAll("[data-v]").forEach((inp) => (inp.oninput = inp.onchange = () => { st.vragen[+inp.dataset.v][inp.dataset.k] = inp.value; bewaar(); }));
+    const ctrl = el.querySelector("[data-controleer]");
+    if (ctrl) ctrl.onclick = () => { st.auto["1.2"] = NK.vragen(st); bewaar(); toonLes(); };
+    const pp = el.querySelector("[data-pptx]");
+    if (pp) pp.onchange = () => nakijken(pp, s);
     el.querySelectorAll("[data-f]").forEach((inp) => {
       const id = inp.dataset.f;
       inp.oninput = inp.onchange = () => {
         const f = (st.feedback[id] = st.feedback[id] || { duo: "", checks: [], top: "", tip: "" });
-        if (inp.dataset.fc !== undefined) f.checks[+inp.dataset.fc] = inp.checked;
-        else f[inp.dataset.k] = inp.value;
+        if (inp.dataset.fc !== undefined) f.checks[+inp.dataset.fc] = inp.checked; else f[inp.dataset.k] = inp.value;
         bewaar();
       };
     });
@@ -252,13 +323,14 @@
       const probleem = velden(s);
       if (probleem) { hint.textContent = probleem; return; }
       if (s.check.some((_, j) => !info.checks[j])) { hint.textContent = "Vink eerst alles aan bij \"Controleer jezelf\"."; return; }
+      scoorBijKlaar(s);
       info.klaar = new Date().toISOString();
       bewaar();
       const les = LESSEN.find((l) => l.nr === st.les);
       const volgende = les.stappen.find((x) => !(st.stappen[x.id] && st.stappen[x.id].klaar));
       openStap = volgende ? volgende.id : null;
       toonLes();
-      if (!volgende) setTimeout(() => alert(`Les ${les.nr} is klaar! Download nu jullie rapport.`), 50);
+      if (!volgende) setTimeout(() => alert(`Les ${les.nr} is klaar! Download nu jullie rapport en lever het in.`), 50);
     };
     const her = el.querySelector("[data-heropen]");
     if (her) her.onclick = () => { info.klaar = null; bewaar(); toonLes(); };
@@ -266,14 +338,14 @@
 
   function download() {
     st.gedownload = new Date().toISOString();
+    st.controlecode = NK.code(st);
     bewaar();
     const naam = `${st.klas}_Kleuterquiz_rapport_${st.namen[0]}_${st.namen[1]}`.replace(/[^\wÀ-ÿ-]+/g, "_");
     const blob = new Blob([JSON.stringify(st, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = naam + ".json";
-    document.body.appendChild(a);
-    a.click();
+    document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
 

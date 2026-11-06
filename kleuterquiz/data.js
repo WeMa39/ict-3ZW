@@ -4,6 +4,10 @@
 // Beelden zijn nagebootste PowerPoint-schermen (zie beelden.js). Een rood kader met
 // een nummer duidt aan waar de leerling moet klikken.
 
+// Link naar jouw Microsoft Form (met een vraag "Bestand uploaden") om rapporten in te leveren.
+// Laat leeg ("") als de leerlingen hun rapport op een andere manier inleveren.
+const INLEVERLINK = "";
+
 const THEMAS = [
   "Handjes wassen",
   "Tanden poetsen",
@@ -81,36 +85,39 @@ const LESSEN = [
     nr: 1,
     titel: "Start: thema, vragen en je eerste dia's",
     intro:
-      "Jullie maken samen een klikbare quiz voor kleuters. Kleuters kunnen niet lezen, dus elke vraag krijgt 3 grote prenten. Een kleuter tikt een prent aan: juist geeft een feestje, fout zegt \"probeer nog eens\". Vandaag bedenken jullie de vragen en maken jullie de eerste dia's.",
+      "Jullie maken samen een klikbare quiz voor kleuters. Kleuters kunnen niet lezen, dus elke vraag krijgt 3 grote prenten. Een kleuter tikt een prent aan: juist geeft een feestje, fout zegt \"probeer nog eens\". Vandaag bedenken jullie de vragen en maken jullie de eerste dia's. Op het einde leveren jullie in en krijgen jullie meteen feedback.",
     stappen: [
       {
         id: "1.1",
-        titel: "Kies jullie thema",
+        titel: "Kies jullie thema en de leeftijd van de kleuters",
         uitleg: [
           "Lees de lijst met thema's hieronder en kies er samen één.",
-          "Denk aan een kleuter van 5 jaar: wat moet die over dit thema weten om gezond of veilig te blijven?",
+          "Kies voor welke leeftijd jullie de quiz maken. Hoe jonger de kleuters, hoe korter en eenvoudiger jullie vragen moeten zijn. De oudste leeftijd is 6 jaar.",
+          "Denk aan een kleuter van die leeftijd: wat moet die over dit thema weten om gezond of veilig te blijven?",
         ],
         type: "thema",
-        check: ["We hebben een thema gekozen."],
-        criterium: "Thema gekozen dat past bij kleuters.",
+        check: ["We hebben een thema en een leeftijd gekozen."],
+        criterium: "Automatisch: thema en leeftijd gekozen.",
       },
       {
         id: "1.2",
-        titel: "Bedenk 5 vragen",
+        titel: "Bedenk 5 vragen en leg uit waarom",
         uitleg: [
-          "Schrijf hieronder 5 korte vragen over jullie thema. Maximum 8 woorden per vraag.",
-          "Geef bij elke vraag 1 juist antwoord en 2 foute antwoorden. Elk antwoord moet je kunnen tonen met een prent.",
-          "Kies bij elke vraag waar de juiste prent komt: links, midden of rechts. Wissel af, zodat de juiste prent niet altijd op dezelfde plaats staat.",
+          "Typ hieronder 5 korte vragen over jullie thema. Typ alles zelf: kopiëren en plakken werkt hier niet.",
+          "Geef bij elke vraag 1 juist antwoord en 2 foute antwoorden. Elk antwoord moet je kunnen tonen met een prent, dus maximum 4 woorden.",
+          "Schrijf bij elke vraag een <b>waarom-zin</b>: een korte zin die aan de kleuter uitlegt waarom het antwoord juist is. Die zin komt later op de Goed-zo-dia.",
+          "Kies bij elke vraag waar de juiste prent komt: links, midden of rechts. Wissel af.",
+          "Klik op <b>Controleer onze vragen</b>. De computer zegt wat nog beter kan. Verbeter en controleer opnieuw tot alles in orde is.",
         ],
         voorbeeld:
-          "Vraag: \"Wanneer was je je handen?\" Juist: na het toilet. Fout: na het tv kijken, na het slapen. Juiste prent: rechts.",
+          "Vraag: \"Wanneer was je je handen?\" Juist: na het toilet. Fout: na het tv kijken, na het slapen. Waarom: \"Na het toilet zitten er vieze bacteriën aan je handen.\" Juiste prent: rechts.",
         type: "vragen",
         check: [
-          "Alle 5 vragen zijn ingevuld, met telkens 1 juist en 2 foute antwoorden.",
-          "De juiste prent staat niet altijd op dezelfde plaats.",
+          "Alle 5 vragen zijn volledig ingevuld, met een waarom-zin.",
+          "We hebben onze vragen laten controleren en verbeterd.",
         ],
         criterium:
-          "5 duidelijke vragen op maat van een kleuter, met 1 juist en 2 foute antwoorden die je met een prent kan tonen. Juiste plaats wisselt af.",
+          "Automatisch: 5 vragen die passen bij jullie thema, kort genoeg voor de gekozen leeftijd, met een vraagteken, 3 verschillende antwoorden van max. 4 woorden, een waarom-zin, en de juiste prent op wisselende plaatsen.",
       },
       {
         id: "1.3",
@@ -148,7 +155,7 @@ const LESSEN = [
           "Het bestand heeft de juiste naam.",
           "Het bestand staat in de map Informatica/PowerPoint op OneDrive.",
         ],
-        criterium: "Bestand met correcte naam in de juiste OneDrive-map.",
+        criterium: "Automatisch: Bestand met correcte naam in de juiste OneDrive-map.",
       },
       {
         id: "1.4",
@@ -181,7 +188,8 @@ const LESSEN = [
           "Mijn partner kan het bestand openen en bewerken.",
           "De leerkracht staat bij de mensen met wie het bestand gedeeld is.",
         ],
-        criterium: "Bestand gedeeld met partner (bewerken) en met de leerkracht.",
+        zelf: true,
+        criterium: "Zelfcontrole: Bestand gedeeld met partner (bewerken) en met de leerkracht.",
       },
       {
         id: "1.5",
@@ -200,7 +208,7 @@ const LESSEN = [
         ],
         tip: "Kleuters houden van kleur, maar donkere tekst op een lichte achtergrond blijft het best leesbaar.",
         check: ["We hebben een ontwerp met een lichte achtergrond gekozen."],
-        criterium: "Passend ontwerp, tekst goed leesbaar.",
+        criterium: "Automatisch: Passend ontwerp, tekst goed leesbaar.",
       },
       {
         id: "1.6",
@@ -219,7 +227,7 @@ const LESSEN = [
           "De titel en onze namen staan op de eerste dia.",
           "De titel is minstens 54 pt in een duidelijk lettertype.",
         ],
-        criterium: "Titeldia met titel (min. 54 pt, duidelijk lettertype) en beide namen.",
+        criterium: "Automatisch: Titeldia met titel (min. 54 pt, duidelijk lettertype) en beide namen.",
       },
       {
         id: "1.7",
@@ -240,7 +248,7 @@ const LESSEN = [
           },
         ],
         check: ["Dia 2 heeft de titel \"Hoe speel je?\" en 3 zinnen uitleg."],
-        criterium: "Uitlegdia met titel en 3 duidelijke zinnen.",
+        criterium: "Automatisch: Uitlegdia met titel en 3 duidelijke zinnen.",
       },
       {
         id: "1.8",
@@ -255,7 +263,7 @@ const LESSEN = [
           "Gebruik hetzelfde lettertype als op je titeldia, minstens <b>40</b> pt.",
         ],
         check: ["Dia 3 is vraag 1, met indeling Alleen titel en minstens 40 pt."],
-        criterium: "Vraagdia met indeling Alleen titel, vraag in min. 40 pt.",
+        criterium: "Automatisch: Vraagdia met indeling Alleen titel, vraag in min. 40 pt.",
       },
       {
         id: "1.9",
@@ -292,7 +300,7 @@ const LESSEN = [
           "Er staan 3 prenten op vraag 1.",
           "Alle 3 de prenten zijn 6 cm hoog.",
         ],
-        criterium: "3 passende prenten, alle 3 even hoog (6 cm).",
+        criterium: "Automatisch: 3 passende prenten, alle 3 even hoog (6 cm).",
       },
       {
         id: "1.10",
@@ -317,7 +325,41 @@ const LESSEN = [
           "De 3 prenten staan op één rij met evenveel ruimte ertussen.",
           "De juiste prent staat op de plaats die we kozen.",
         ],
-        criterium: "Prenten uitgelijnd en gelijk verdeeld; juiste prent op de gekozen plaats.",
+        criterium: "Automatisch: Prenten uitgelijnd en gelijk verdeeld; juiste prent op de gekozen plaats.",
+      },
+      {
+        id: "1.11",
+        titel: "Geef je prenten een mooie rand",
+        nieuw: true,
+        uitleg: [
+          "Selecteer de 3 prenten van vraag 1 (Shift ingedrukt houden).",
+          {
+            t: "Ga naar <b>Afbeeldingsopmaak</b>. In de groep <b>Afbeeldingsstijlen</b> zie je voorbeelden. Kies een stijl met een rand, bv. <b>Eenvoudig frame, wit</b>.",
+            b: LINT("Afbeeldingsopmaak", [
+              G("Aanpassen", [K("Correcties", "☀️", 0, { menu: true })]),
+              G("Afbeeldingsstijlen", [DUIM("", "🖼️", 1, "border:4px solid #fff;box-shadow:0 0 0 1px #c8c6c4"), DUIM("", "🖼️", 0, "border:3px solid #333"), DUIM("", "🖼️", 0, "border-radius:50%"), DUIM("", "🖼️", 0, "box-shadow:3px 3px 4px #888"), KK("Afbeeldingsrand", "▭", 0, { menu: true })]),
+              G("Grootte", [VELD("6 cm", 0, { label: "↕" })]),
+            ], { tabs: TABS_AFB, uitleg: "Afbeeldingsstijlen: kies een stijl met een rand (1)." }),
+          },
+          "Kijk of de prenten nog altijd netjes op een rij staan. Zo niet: doe stap 1.10 opnieuw.",
+        ],
+        tip: "Een witte rand rond elke prent maakt het voor een kleuter duidelijk: dit is een knop die je kan aantikken.",
+        check: ["Alle 3 de prenten hebben dezelfde afbeeldingsstijl."],
+        criterium: "Automatisch: alle prenten van vraag 1 hebben een afbeeldingsstijl.",
+      },
+      {
+        id: "1.12",
+        titel: "Inleveren en feedback krijgen",
+        uitleg: [
+          "Kijk of <b>Automatisch opslaan</b> aan staat en sluit PowerPoint.",
+          "Klik hieronder op <b>Kies ons PowerPoint-bestand</b>. Kies jullie bestand in de map OneDrive → Informatica → PowerPoint.",
+          "De computer kijkt jullie werk na. Lees de feedback bij elke stap. Wat nog niet goed is, kunnen jullie de volgende les verbeteren.",
+          "Klik op <b>Download ons rapport</b> en lever het rapport in zoals je leerkracht vraagt.",
+        ],
+        type: "inleveren",
+        les: 1,
+        check: ["We hebben ons bestand laten nakijken en de feedback gelezen.", "We hebben ons rapport gedownload en ingeleverd."],
+        criterium: "Automatisch: bestand nagekeken en ingeleverd.",
       },
     ],
   },
@@ -327,7 +369,7 @@ const LESSEN = [
     nr: 2,
     titel: "Alle dia's en de eerste knoppen",
     intro:
-      "Vandaag maken jullie alle vragen af en bouwen jullie de dia's waar de kleuter terechtkomt: \"Goed zo!\" en \"Oei!\". Daarna maken jullie van de prenten knoppen.",
+      "Vandaag maken jullie alle vragen af en bouwen jullie de dia's waar de kleuter terechtkomt: \"Goed zo!\" en \"Oei!\". Daarna maken jullie van de prenten knoppen en zetten jullie de waarom-zinnen op de Goed-zo-dia's.",
     schema: true,
     stappen: [
       {
@@ -345,7 +387,8 @@ const LESSEN = [
           "Kijk linksboven of <b>Automatisch opslaan</b> aan staat. Dan werken jullie in het gedeelde bestand en niet in een kopie.",
         ],
         check: ["Ons gedeelde bestand is open en Automatisch opslaan staat aan."],
-        criterium: "Gedeeld bestand geopend (geen kopie gemaakt).",
+        zelf: true,
+        criterium: "Zelfcontrole: Gedeeld bestand geopend (geen kopie gemaakt).",
       },
       {
         id: "2.2",
@@ -371,7 +414,7 @@ const LESSEN = [
           "Er zijn 5 vraagdia's met dezelfde opmaak.",
           "Op elke vraag staan 3 prenten die passen bij onze antwoorden.",
         ],
-        criterium: "5 vraagdia's met gelijke opmaak, telkens 3 passende prenten.",
+        criterium: "Automatisch: 5 vraagdia's met gelijke opmaak, telkens 3 passende prenten.",
       },
       {
         id: "2.3",
@@ -389,7 +432,7 @@ const LESSEN = [
         ],
         tip: "De kleuter ziet de notities niet. Ze helpen jou straks bij het maken van de knoppen.",
         check: ["Bij elke vraag staat in de notities welke prent juist is."],
-        criterium: "Notities ingevuld bij alle 5 vragen.",
+        criterium: "Automatisch: Notities ingevuld bij alle 5 vragen.",
       },
       {
         id: "2.4",
@@ -410,7 +453,7 @@ const LESSEN = [
           "Na elke vraag staat een Goed-zo-dia.",
           "De Goed-zo-dia's hebben een grote groene tekst en een vrolijke prent.",
         ],
-        criterium: "5 Goed-zo-dia's, elk direct na de juiste vraag.",
+        criterium: "Automatisch: 5 Goed-zo-dia's, elk direct na de juiste vraag.",
       },
       {
         id: "2.5",
@@ -428,7 +471,7 @@ const LESSEN = [
           "Er is een vriendelijke Oei-dia en een slotdia.",
           "Onze quiz heeft 14 dia's in de juiste volgorde.",
         ],
-        criterium: "Oei-dia (vriendelijk) en slotdia aanwezig, 14 dia's in de juiste volgorde.",
+        criterium: "Automatisch: Oei-dia (vriendelijk) en slotdia aanwezig, 14 dia's in de juiste volgorde.",
       },
       {
         id: "2.6",
@@ -448,7 +491,7 @@ const LESSEN = [
         ],
         tip: "Alle Goed-zo-dia's heten hetzelfde. Kijk daarom naar het <b>nummer</b> voor de naam: vraag 1 gaat naar dia 4, vraag 2 naar dia 6, vraag 3 naar dia 8, vraag 4 naar dia 10 en vraag 5 naar dia 12. Fout gekoppeld? Rechtermuisknop op de prent → <b>Koppeling bewerken</b>.",
         check: ["Bij alle 5 vragen gaat de juiste prent naar de juiste Goed-zo-dia."],
-        criterium: "5 juiste prenten correct gekoppeld aan de bijhorende Goed-zo-dia.",
+        criterium: "Automatisch: 5 juiste prenten correct gekoppeld aan de bijhorende Goed-zo-dia.",
       },
       {
         id: "2.7",
@@ -463,7 +506,7 @@ const LESSEN = [
           "Herhaal voor vraag 2 tot en met 5. Dat zijn 10 foute prenten in totaal.",
         ],
         check: ["Alle 10 foute prenten gaan naar de Oei-dia."],
-        criterium: "10 foute prenten correct gekoppeld aan de Oei-dia.",
+        criterium: "Automatisch: 10 foute prenten correct gekoppeld aan de Oei-dia.",
       },
       {
         id: "2.8",
@@ -486,7 +529,39 @@ const LESSEN = [
           "Elke Goed-zo-dia heeft een Verder-pijl naar de volgende vraag.",
           "De laatste Verder-pijl gaat naar de slotdia.",
         ],
-        criterium: "5 Verder-pijlen, elk naar de juiste volgende dia.",
+        criterium: "Automatisch: 5 Verder-pijlen, elk naar de juiste volgende dia.",
+      },
+      {
+        id: "2.9",
+        titel: "Zet de waarom-zin op elke Goed-zo-dia",
+        nieuw: true,
+        uitleg: [
+          "Ga naar de eerste Goed-zo-dia.",
+          {
+            t: "Klik op <b>Invoegen</b> → <b>Tekstvak</b>. Klik op de dia, onder \"Goed zo!\", en typ de waarom-zin van vraag 1. Je vindt jullie waarom-zinnen hieronder.",
+            b: Object.assign(INVOEGEN({}), { uitleg: "Invoegen → Tekstvak (in de groep Tekst)." }),
+          },
+          "Maak de tekst groot genoeg (minstens 28 pt) en zet hem in het midden.",
+          "Doe hetzelfde op de andere Goed-zo-dia's, telkens met de waarom-zin van de vraag ervoor.",
+        ],
+        type: "waarom",
+        tip: "De juf of meester leest deze zin voor als de kleuter juist antwoordt. Zo leert de kleuter ook iets bij.",
+        check: ["Op elke Goed-zo-dia staat de waarom-zin van de vraag ervoor."],
+        criterium: "Automatisch: op elke Goed-zo-dia staat een waarom-zin van minstens 4 woorden.",
+      },
+      {
+        id: "2.10",
+        titel: "Inleveren en feedback krijgen",
+        uitleg: [
+          "Kijk of <b>Automatisch opslaan</b> aan staat en sluit PowerPoint.",
+          "Klik hieronder op <b>Kies ons PowerPoint-bestand</b>. Kies jullie bestand in de map OneDrive → Informatica → PowerPoint.",
+          "De computer kijkt jullie werk na. Lees de feedback bij elke stap. Wat nog niet goed is, kunnen jullie de volgende les verbeteren.",
+          "Klik op <b>Download ons rapport</b> en lever het rapport in zoals je leerkracht vraagt.",
+        ],
+        type: "inleveren",
+        les: 2,
+        check: ["We hebben ons bestand laten nakijken en de feedback gelezen.", "We hebben ons rapport gedownload en ingeleverd."],
+        criterium: "Automatisch: bestand nagekeken en ingeleverd.",
       },
     ],
   },
@@ -496,7 +571,7 @@ const LESSEN = [
     nr: 3,
     titel: "Laatste knoppen, geluid en afwerking",
     intro:
-      "Vandaag wordt jullie quiz een echt spelletje: de laatste knoppen, de vragen worden voorgelezen, er komt beweging bij en jullie testen alles. Op het einde leveren jullie in.",
+      "Vandaag wordt jullie quiz een echt spelletje: de laatste knoppen, de vragen worden voorgelezen, er komen beweging en applaus bij en jullie testen alles. Op het einde leveren jullie in.",
     schema: true,
     stappen: [
       {
@@ -525,7 +600,7 @@ const LESSEN = [
         ],
         tip: "\"Laatst weergegeven dia\" is slim: de kleuter gaat altijd terug naar de vraag waar hij of zij net was. Daarom heb je maar één Oei-dia nodig.",
         check: ["De Nog-eens-pijl is via Actie gekoppeld aan Laatst weergegeven dia."],
-        criterium: "Nog-eens-knop gekoppeld aan Laatst weergegeven dia.",
+        criterium: "Automatisch: Nog-eens-knop gekoppeld aan Laatst weergegeven dia.",
       },
       {
         id: "3.2",
@@ -546,25 +621,10 @@ const LESSEN = [
           "De Start-knop gaat naar de uitlegdia.",
           "De Speel-knop gaat naar vraag 1.",
         ],
-        criterium: "Start- en Speel-knop aanwezig en correct gekoppeld.",
+        criterium: "Automatisch: Start- en Speel-knop aanwezig en correct gekoppeld.",
       },
       {
         id: "3.3",
-        titel: "Test alle knoppen",
-        uitleg: [
-          "Druk op <b>F5</b>.",
-          "Klik <b>alleen op prenten en knoppen</b>, nooit ernaast.",
-          "Probeer bij elke vraag eerst een foute prent, klik op Nog eens, en kies dan de juiste prent.",
-          "Werkt iets niet? Druk op Esc, verbeter de koppeling en test opnieuw.",
-        ],
-        check: [
-          "We kunnen de hele quiz spelen van Start tot de slotdia.",
-          "Nog eens brengt ons bij elke vraag terug naar dezelfde vraag.",
-        ],
-        criterium: "Volledige quiz speelbaar zonder foute koppeling.",
-      },
-      {
-        id: "3.4",
         titel: "Spreek de vragen in",
         nieuw: true,
         uitleg: [
@@ -594,10 +654,10 @@ const LESSEN = [
           "Alle 5 de vragen worden automatisch voorgelezen.",
           "We hebben allebei vragen ingesproken.",
         ],
-        criterium: "5 vragen ingesproken, starten automatisch, luidspreker verborgen; duidelijk verstaanbaar.",
+        criterium: "Automatisch: 5 vragen ingesproken, starten automatisch, luidspreker verborgen; duidelijk verstaanbaar.",
       },
       {
-        id: "3.5",
+        id: "3.4",
         titel: "Laat de Goed-zo-prent bewegen",
         nieuw: true,
         uitleg: [
@@ -614,10 +674,10 @@ const LESSEN = [
         ],
         tip: "Een beetje beweging is leuk, te veel maakt een kleuter onrustig. Alleen de Goed-zo-prenten krijgen een animatie.",
         check: ["Op alle 5 de Goed-zo-dia's beweegt de prent vanzelf."],
-        criterium: "Animatie op de 5 Goed-zo-prenten, start automatisch, niet overdreven.",
+        criterium: "Automatisch: Animatie op de 5 Goed-zo-prenten, start automatisch, niet overdreven.",
       },
       {
-        id: "3.6",
+        id: "3.5",
         titel: "Kies een rustige overgang",
         nieuw: true,
         uitleg: [
@@ -631,7 +691,26 @@ const LESSEN = [
           },
         ],
         check: ["Alle dia's hebben dezelfde rustige overgang."],
-        criterium: "Eén rustige overgang op alle dia's.",
+        criterium: "Automatisch: Eén rustige overgang op alle dia's.",
+      },
+      {
+        id: "3.6",
+        titel: "Laat applaus klinken bij Goed zo",
+        nieuw: true,
+        uitleg: [
+          "Klik links op de eerste Goed-zo-dia. Houd <b>Ctrl</b> ingedrukt en klik op de andere 4 Goed-zo-dia's. Nu zijn ze alle 5 geselecteerd.",
+          {
+            t: "Ga naar het tabblad <b>Overgangen</b>. Klik bij <b>Geluid</b> op het pijltje en kies <b>Applaus</b>.",
+            b: LINT("Overgangen", [
+              G("Overgang naar deze dia", [DUIM("Geen", "▭"), DUIM("Vervagen", "◌"), DUIM("Duwen", "⇥")]),
+              G("Timing", [VELD("Applaus", 1, { label: "Geluid:", w: 140 }), VELD("00,70", 0, { label: "Duur:" }), KK("Op alles toepassen", "⧉", 0)], true),
+            ], { uitleg: "Overgangen → Geluid: Applaus (1). Niet op alles toepassen!" }),
+          },
+          "Let op: klik nu <b>niet</b> op Op alles toepassen. Het applaus hoort alleen bij de Goed-zo-dia's.",
+          "Test met <b>F5</b>: hoor je applaus als je de juiste prent aanklikt?",
+        ],
+        check: ["Op alle 5 de Goed-zo-dia's klinkt applaus, op de andere dia's niet."],
+        criterium: "Automatisch: applaus op de 5 Goed-zo-dia's.",
       },
       {
         id: "3.7",
@@ -655,7 +734,7 @@ const LESSEN = [
         ],
         tip: "Wil je de quiz stoppen in de kiosk-modus? Druk op <b>Esc</b>.",
         check: ["De kiosk-modus staat aan en naast een prent klikken doet niets."],
-        criterium: "Kiosk-modus ingesteld.",
+        criterium: "Automatisch: Kiosk-modus ingesteld.",
       },
       {
         id: "3.8",
@@ -674,21 +753,36 @@ const LESSEN = [
         ],
         tip: "Alternatieve tekst helpt mensen die slecht zien: hun computer leest voor wat er op de prent staat.",
         check: ["Alle prenten op de vraagdia's hebben een alternatieve tekst."],
-        criterium: "Alternatieve tekst bij alle 15 prenten op de vraagdia's.",
+        criterium: "Automatisch: Alternatieve tekst bij alle 15 prenten op de vraagdia's.",
       },
       {
         id: "3.9",
-        titel: "Laatste controle en inleveren",
+        titel: "Test alle knoppen",
         uitleg: [
-          "Speel jullie quiz nog één keer volledig met <b>F5</b>.",
-          "Kijk of <b>Automatisch opslaan</b> nog aan staat en sluit PowerPoint.",
-          "Klik hieronder op <b>Download ons rapport</b> en lever het in zoals je leerkracht vraagt.",
+          "Druk op <b>F5</b>.",
+          "Klik <b>alleen op prenten en knoppen</b>, nooit ernaast.",
+          "Probeer bij elke vraag eerst een foute prent, klik op Nog eens, en kies dan de juiste prent.",
+          "Werkt iets niet? Druk op Esc, verbeter de koppeling en test opnieuw.",
         ],
         check: [
-          "Onze quiz werkt van begin tot einde.",
-          "Het bestand staat opgeslagen op OneDrive.",
+          "We kunnen de hele quiz spelen van Start tot de slotdia.",
+          "Nog eens brengt ons bij elke vraag terug naar dezelfde vraag.",
         ],
-        criterium: "Afgewerkte quiz op OneDrive, rapport ingeleverd.",
+        criterium: "Automatisch: alle knoppen uit 2.6, 2.7, 2.8, 3.1 en 3.2 werken.",
+      },
+      {
+        id: "3.10",
+        titel: "Inleveren en feedback krijgen",
+        uitleg: [
+          "Kijk of <b>Automatisch opslaan</b> aan staat en sluit PowerPoint.",
+          "Klik hieronder op <b>Kies ons PowerPoint-bestand</b>. Kies jullie bestand in de map OneDrive → Informatica → PowerPoint.",
+          "De computer kijkt jullie werk na. Lees de feedback bij elke stap. Wat nog niet goed is, kunnen jullie de volgende les verbeteren.",
+          "Klik op <b>Download ons rapport</b> en lever het rapport in zoals je leerkracht vraagt.",
+        ],
+        type: "inleveren",
+        les: 3,
+        check: ["We hebben ons bestand laten nakijken en de feedback gelezen.", "We hebben ons rapport gedownload en ingeleverd."],
+        criterium: "Automatisch: bestand nagekeken en ingeleverd.",
       },
     ],
   },
@@ -698,7 +792,7 @@ const LESSEN = [
     nr: 4,
     titel: "Quizfeest: speel elkaars quiz",
     intro:
-      "Vandaag spelen jullie de quiz van andere duo's. Eén van jullie speelt de kleuter, de andere is de juf of meester. Na elke quiz geven jullie eerlijke en vriendelijke feedback.",
+      "Vandaag spelen jullie de quiz van andere duo's. Eén van jullie speelt de kleuter, de andere is de juf of meester. Na elke quiz geven jullie eerlijke en vriendelijke feedback. Daarna verbeteren jullie je eigen quiz nog een laatste keer.",
     stappen: [
       {
         id: "4.1",
@@ -710,7 +804,7 @@ const LESSEN = [
         ],
         type: "feedback",
         check: ["We hebben de quiz gespeeld en de feedback ingevuld."],
-        criterium: "Quiz gespeeld, feedback volledig, eerlijk en vriendelijk.",
+        criterium: "Automatisch: duo ingevuld, een top en een tip van minstens 5 woorden.",
       },
       {
         id: "4.2",
@@ -721,19 +815,31 @@ const LESSEN = [
         ],
         type: "feedback",
         check: ["We hebben de quiz gespeeld en de feedback ingevuld."],
-        criterium: "Quiz gespeeld, feedback volledig, eerlijk en vriendelijk.",
+        criterium: "Automatisch: duo ingevuld, een top en een tip van minstens 5 woorden.",
       },
       {
         id: "4.3",
+        titel: "Verbeter jullie quiz en lever opnieuw in",
+        uitleg: [
+          "Lees de feedback die jullie kregen van de andere duo's en de feedback van de computer bij les 1, 2 en 3.",
+          "Open jullie PowerPoint en verbeter wat nog niet goed is. Begin bij de stappen met 0 of 1 punt.",
+          "Kies hieronder opnieuw jullie bestand. De computer kijkt alles nog eens na. Deze laatste versie telt voor jullie punten.",
+        ],
+        type: "inleveren",
+        les: 4,
+        check: ["We hebben minstens 1 verbetering gedaan en opnieuw laten nakijken."],
+        criterium: "Automatisch: opnieuw ingeleverd en minstens even goed als bij les 3.",
+      },
+      {
+        id: "4.4",
         titel: "Kijk terug op jullie eigen quiz",
         uitleg: [
-          "Vraag aan de duo's die jullie quiz speelden wat ze ervan vonden.",
-          "Beantwoord de vragen hieronder samen.",
+          "Beantwoord de vragen hieronder samen. Typ ze zelf.",
           "Klik op <b>Download ons rapport</b> en lever het in.",
         ],
         type: "reflectie",
         check: ["We hebben de terugblik ingevuld en het rapport ingeleverd."],
-        criterium: "Eerlijke terugblik met minstens 1 concreet verbeterpunt.",
+        criterium: "Automatisch: elke vraag beantwoord met minstens 6 woorden.",
       },
     ],
   },

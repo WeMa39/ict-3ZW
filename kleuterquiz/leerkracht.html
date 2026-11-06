@@ -5,13 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kleuterquiz – leerkracht</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    body { -webkit-user-select: text; user-select: text; }
+    .waarschuwing { background: #fbe1de; border-radius: 8px; padding: 8px 12px; margin: 8px 0; font-size: .95rem; }
+    td.fb { font-size: .9rem; color: var(--zacht); }
+    .aangepast { font-size: .8rem; color: var(--blauw); }
+  </style>
 </head>
 <body>
   <header class="top">
-    <div class="wrap"><h1>Kleuterquiz – beoordeling leerkracht</h1></div>
+    <div class="wrap"><h1>Kleuterquiz – overzicht leerkracht</h1></div>
   </header>
   <main class="wrap" id="app"></main>
   <script src="data.js"></script>
+  <script src="nakijken.js"></script>
   <script>
   (function () {
     const OPSLAG = "kleuterquiz-leerkracht-v1";
@@ -27,10 +34,11 @@
     const bewaar = () => { try { localStorage.setItem(OPSLAG, JSON.stringify(db)); } catch (e) {} };
     const sleutel = (r) => `${r.klas}|${r.namen[0]}|${r.namen[1]}`.toLowerCase();
 
-    function totaal(d, lesNr) {
-      return ALLE.filter((s) => !lesNr || s.les === lesNr).reduce((t, s) => t + (d.scores[s.id] ?? 0), 0);
-    }
-    function maxLes(lesNr) { return ALLE.filter((s) => s.les === lesNr).length * 2; }
+    // Score van een stap: jouw aanpassing gaat voor, anders de automatische score.
+    const score = (d, id) => d.scores?.[id] ?? d.rapport.auto?.[id]?.score;
+    const totaal = (d, lesNr) => ALLE.filter((s) => !lesNr || s.les === lesNr).reduce((t, s) => t + (score(d, s.id) ?? 0), 0);
+    const maxLes = (lesNr) => ALLE.filter((s) => s.les === lesNr).length * 2;
+    const echt = (r) => !r.controlecode || NK.code(r) === r.controlecode;
 
     function importeer(files) {
       let n = 0;
@@ -40,7 +48,6 @@
           if (!r || r.versie !== 1 || !r.namen) return;
           const k = sleutel(r);
           const oud = db.duos[k] || { scores: {}, opm: {} };
-          // Het meest recente rapport wint voor de leerlingdata; scores van de leerkracht blijven staan.
           if (!oud.rapport || (r.gedownload || "") >= (oud.rapport.gedownload || "")) oud.rapport = r;
           db.duos[k] = oud; actief = k; n++;
         } catch (e) {}
@@ -48,10 +55,10 @@
     }
 
     function exporteer() {
-      const kop = ["Klas", "Leerling 1", "Leerling 2", "Thema", ...ALLE.map((s) => "Stap " + s.id), ...LESSEN.map((l) => "Les " + l.nr), "Totaal", "Max", "Procent"];
+      const kop = ["Klas", "Leerling 1", "Leerling 2", "Thema", "Leeftijd", ...ALLE.map((s) => "Stap " + s.id), ...LESSEN.map((l) => "Les " + l.nr), "Totaal", "Max", "Procent", "Plakpogingen", "Rapport aangepast?"];
       const rijen = Object.values(db.duos).map((d) => {
         const r = d.rapport;
-        return [r.klas, r.namen[0], r.namen[1], r.thema, ...ALLE.map((s) => d.scores[s.id] ?? ""), ...LESSEN.map((l) => totaal(d, l.nr)), totaal(d), MAX, Math.round((totaal(d) / MAX) * 100)];
+        return [r.klas, r.namen[0], r.namen[1], r.thema, r.leeftijd, ...ALLE.map((s) => score(d, s.id) ?? ""), ...LESSEN.map((l) => totaal(d, l.nr)), totaal(d), MAX, Math.round((totaal(d) / MAX) * 100), r.getypt?.geblokkeerd ?? 0, echt(r) ? "nee" : "JA"];
       });
       const csv = [kop, ...rijen].map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\r\n");
       const a = document.createElement("a");
@@ -66,7 +73,7 @@
       app.innerHTML = `
         <div class="kaart">
           <h2>Rapporten van de duo's</h2>
-          <p class="klein-tekst">Lees de rapporten in die de leerlingen downloadden (.json, je mag er meerdere tegelijk kiezen). Je ziet per stap of en wanneer ze die afvinkten. Open daarna hun PowerPoint (gedeeld met jou op OneDrive) en geef per stap 0, 1 of 2 punten. Alles blijft bewaard in deze browser.</p>
+          <p class="klein-tekst">Lees de rapporten in die de leerlingen inleverden (.json, je mag er meerdere tegelijk kiezen). De computer heeft elke stap al nagekeken: je ziet de score en de feedback die de leerlingen kregen. Wil je een score aanpassen, klik dan op een ander cijfer. Alles blijft bewaard in deze browser.</p>
           <input type="file" id="imp" multiple accept=".json,application/json">
           <p class="duolijst" style="margin-top:12px">${duos.map(([k, x]) => `<button data-duo="${esc(k)}" class="${k === actief ? "actief" : ""}">${esc(x.rapport.klas)} · ${esc(x.rapport.namen[0])} & ${esc(x.rapport.namen[1])} <span class="klein-tekst">${totaal(x)}/${MAX}</span></button>`).join("") || '<span class="klein-tekst">Nog geen rapporten ingelezen.</span>'}</p>
           <div class="rapport-knoppen">
@@ -78,51 +85,50 @@
         ${d ? duoHTML(d) : ""}`;
       document.getElementById("imp").onchange = (e) => importeer(e.target.files);
       document.getElementById("exp").onclick = exporteer;
-      const wis = document.getElementById("wis");
-      if (d) wis.onclick = () => { if (confirm("Dit duo en je scores verwijderen?")) { delete db.duos[actief]; actief = Object.keys(db.duos)[0] || null; bewaar(); toon(); } };
+      if (d) document.getElementById("wis").onclick = () => { if (confirm("Dit duo en je scores verwijderen?")) { delete db.duos[actief]; actief = Object.keys(db.duos)[0] || null; bewaar(); toon(); } };
       app.querySelectorAll("[data-duo]").forEach((b) => (b.onclick = () => { actief = b.dataset.duo; toon(); }));
       app.querySelectorAll("[data-score]").forEach((b) => (b.onclick = () => {
         const [id, v] = b.dataset.score.split("|");
-        d.scores[id] = d.scores[id] === +v ? undefined : +v;
+        const auto = d.rapport.auto?.[id]?.score;
+        d.scores[id] = +v === auto || d.scores[id] === +v ? undefined : +v;
         bewaar(); toon();
       }));
       app.querySelectorAll("[data-opm]").forEach((t) => (t.onchange = () => { d.opm[t.dataset.opm] = t.value; bewaar(); }));
-      app.querySelectorAll("[data-alles2]").forEach((b) => (b.onclick = () => {
-        const nr = +b.dataset.alles2;
-        ALLE.filter((s) => s.les === nr && d.rapport.stappen[s.id]?.klaar && d.scores[s.id] === undefined).forEach((s) => (d.scores[s.id] = 2));
-        bewaar(); toon();
-      }));
     }
 
     function duoHTML(d) {
       const r = d.rapport;
-      const vragen = (r.vragen || []).map((v, i) => `<tr><td>${i + 1}</td><td>${esc(v.vraag)}</td><td>${esc(v.juist)}</td><td>${esc(v.fout1)} / ${esc(v.fout2)}</td><td>${esc(v.plaats)}</td></tr>`).join("");
+      const vragen = (r.vragen || []).map((v, i) => `<tr><td>${i + 1}</td><td>${esc(v.vraag)}</td><td>${esc(v.juist)}</td><td>${esc(v.fout1)} / ${esc(v.fout2)}</td><td>${esc(v.waarom)}</td><td>${esc(v.plaats)}</td></tr>`).join("");
       const fb = ["4.1", "4.2"].map((id) => {
         const f = r.feedback?.[id]; if (!f) return "";
         return `<p><b>Stap ${id}</b> – quiz van ${esc(f.duo)}: ${FEEDBACK_VRAGEN.filter((_, j) => f.checks?.[j]).length}/${FEEDBACK_VRAGEN.length} in orde.<br>Top: ${esc(f.top)}<br>Tip: ${esc(f.tip)}</p>`;
       }).join("");
       const refl = REFLECTIE_VRAGEN.map((q, i) => r.reflectie?.[i] ? `<p><b>${esc(q)}</b><br>${esc(r.reflectie[i])}</p>` : "").join("");
+      const inzendingen = Object.entries(r.controles || {}).map(([les, c]) => `les ${les}: ${tijd(c.datum)} (${esc(c.bestand)})`).join(" · ");
+      const g = r.getypt || {};
       return `
         <div class="kaart">
           <h2>${esc(r.namen[0])} & ${esc(r.namen[1])} <span class="klein-tekst">(${esc(r.klas)})</span></h2>
-          <p>Thema: <b>${esc(r.thema || "nog niet gekozen")}</b> · Totaal: <b>${totaal(d)}/${MAX}</b> (${Math.round((totaal(d) / MAX) * 100)}%) · ${LESSEN.map((l) => `Les ${l.nr}: ${totaal(d, l.nr)}/${maxLes(l.nr)}`).join(" · ")}</p>
-          <p class="klein-tekst">Laatste rapport gedownload: ${tijd(r.gedownload)}</p>
+          ${echt(r) ? "" : '<div class="waarschuwing">Let op: dit rapport werd na het downloaden aangepast. De scores zijn misschien niet echt.</div>'}
+          ${g.geblokkeerd ? `<div class="waarschuwing">${g.geblokkeerd} keer geprobeerd om iets te plakken of te kopiëren (geblokkeerd).${g.verdacht ? ` ${g.verdacht} keer kwam er plots veel tekst tegelijk bij.` : ""}</div>` : ""}
+          <p>Thema: <b>${esc(r.thema || "nog niet gekozen")}</b> · Leeftijd: <b>${esc(r.leeftijd || "?")} jaar</b> · Totaal: <b>${totaal(d)}/${MAX}</b> (${Math.round((totaal(d) / MAX) * 100)}%)</p>
+          <p>${LESSEN.map((l) => `Les ${l.nr}: <b>${totaal(d, l.nr)}/${maxLes(l.nr)}</b>`).join(" · ")}</p>
+          <p class="klein-tekst">Ingeleverd: ${inzendingen || "nog geen PowerPoint ingeleverd"} · Laatste rapport: ${tijd(r.gedownload)}</p>
         </div>
-        ${vragen ? `<div class="kaart"><h3>Hun 5 vragen (stap 1.2)</h3><div class="tabel-scroll"><table class="score"><tr><th>#</th><th>Vraag</th><th>Juist</th><th>Fout</th><th>Plaats</th></tr>${vragen}</table></div></div>` : ""}
+        ${vragen ? `<div class="kaart"><h3>Hun 5 vragen (stap 1.2)</h3><div class="tabel-scroll"><table class="score"><tr><th>#</th><th>Vraag</th><th>Juist</th><th>Fout</th><th>Waarom</th><th>Plaats</th></tr>${vragen}</table></div></div>` : ""}
         ${LESSEN.map((l) => `
           <div class="kaart">
             <h3>Les ${l.nr}: ${esc(l.titel)} <span class="klein-tekst">${totaal(d, l.nr)}/${maxLes(l.nr)}</span></h3>
-            <p class="geen-print"><button class="tweede klein" data-alles2="${l.nr}">Alle afgevinkte stappen zonder score op 2 zetten</button></p>
             <div class="tabel-scroll"><table class="score">
-              <tr><th>Stap</th><th>Wat je nakijkt</th><th>Afgevinkt</th><th>Score</th><th>Opmerking</th></tr>
+              <tr><th>Stap</th><th>Score</th><th>Feedback die de leerlingen kregen</th><th>Jouw opmerking</th></tr>
               ${l.stappen.map((s) => {
-                const k = r.stappen?.[s.id]?.klaar;
-                const sc = d.scores[s.id];
+                const a = r.auto?.[s.id];
+                const sc = score(d, s.id);
+                const handmatig = d.scores?.[s.id] !== undefined;
                 return `<tr>
                   <td><b>${s.id}</b><br>${esc(s.titel)}</td>
-                  <td>${esc(s.criterium)}</td>
-                  <td>${k ? "✓ " + tijd(k) : '<span style="color:#c0392b">niet</span>'}</td>
-                  <td><span class="scorek">${[0, 1, 2].map((v) => `<button class="s${v} ${sc === v ? "aan" : ""}" data-score="${s.id}|${v}" title="${["niet gedaan", "deels correct", "correct"][v]}">${v}</button>`).join("")}</span></td>
+                  <td><span class="scorek">${[0, 1, 2].map((v) => `<button class="s${v} ${sc === v ? "aan" : ""}" data-score="${s.id}|${v}" title="${["niet gedaan", "deels correct", "correct"][v]}">${v}</button>`).join("")}</span>${handmatig ? '<br><span class="aangepast">door jou aangepast</span>' : a?.zelf ? '<br><span class="aangepast">zelfcontrole</span>' : ""}</td>
+                  <td class="fb">${a ? a.fb.map(esc).join("<br>") : '<span style="color:#c0392b">nog niet nagekeken</span>'}</td>
                   <td><textarea data-opm="${s.id}" rows="1" style="min-height:36px">${esc(d.opm[s.id])}</textarea></td>
                 </tr>`;
               }).join("")}
