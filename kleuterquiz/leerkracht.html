@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kleuterquiz – leerkracht</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap"><h1>Kleuterquiz – beoordeling leerkracht</h1></div>
+  </header>
+  <main class="wrap" id="app"></main>
+  <script src="data.js"></script>
+  <script>
+  (function () {
+    const OPSLAG = "kleuterquiz-leerkracht-v1";
+    const app = document.getElementById("app");
+    const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const tijd = (iso) => iso ? new Date(iso).toLocaleString("nl-BE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+    const ALLE = LESSEN.flatMap((l) => l.stappen.map((s) => ({ ...s, les: l.nr })));
+    const MAX = ALLE.length * 2;
+
+    let db;
+    try { db = JSON.parse(localStorage.getItem(OPSLAG)) || { duos: {} }; } catch (e) { db = { duos: {} }; }
+    let actief = Object.keys(db.duos)[0] || null;
+    const bewaar = () => { try { localStorage.setItem(OPSLAG, JSON.stringify(db)); } catch (e) {} };
+    const sleutel = (r) => `${r.klas}|${r.namen[0]}|${r.namen[1]}`.toLowerCase();
+
+    function totaal(d, lesNr) {
+      return ALLE.filter((s) => !lesNr || s.les === lesNr).reduce((t, s) => t + (d.scores[s.id] ?? 0), 0);
+    }
+    function maxLes(lesNr) { return ALLE.filter((s) => s.les === lesNr).length * 2; }
+
+    function importeer(files) {
+      let n = 0;
+      Promise.all([...files].map((f) => f.text().then((t) => {
+        try {
+          const r = JSON.parse(t);
+          if (!r || r.versie !== 1 || !r.namen) return;
+          const k = sleutel(r);
+          const oud = db.duos[k] || { scores: {}, opm: {} };
+          // Het meest recente rapport wint voor de leerlingdata; scores van de leerkracht blijven staan.
+          if (!oud.rapport || (r.gedownload || "") >= (oud.rapport.gedownload || "")) oud.rapport = r;
+          db.duos[k] = oud; actief = k; n++;
+        } catch (e) {}
+      }))).then(() => { bewaar(); toon(); alert(n + " rapport(en) ingelezen."); });
+    }
+
+    function exporteer() {
+      const kop = ["Klas", "Leerling 1", "Leerling 2", "Thema", ...ALLE.map((s) => "Stap " + s.id), ...LESSEN.map((l) => "Les " + l.nr), "Totaal", "Max", "Procent"];
+      const rijen = Object.values(db.duos).map((d) => {
+        const r = d.rapport;
+        return [r.klas, r.namen[0], r.namen[1], r.thema, ...ALLE.map((s) => d.scores[s.id] ?? ""), ...LESSEN.map((l) => totaal(d, l.nr)), totaal(d), MAX, Math.round((totaal(d) / MAX) * 100)];
+      });
+      const csv = [kop, ...rijen].map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";")).join("\r\n");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" }));
+      a.download = "kleuterquiz_scores.csv";
+      document.body.appendChild(a); a.click(); setTimeout(() => a.remove(), 500);
+    }
+
+    function toon() {
+      const duos = Object.entries(db.duos).sort((a, b) => a[0].localeCompare(b[0]));
+      const d = actief && db.duos[actief];
+      app.innerHTML = `
+        <div class="kaart">
+          <h2>Rapporten van de duo's</h2>
+          <p class="klein-tekst">Lees de rapporten in die de leerlingen downloadden (.json, je mag er meerdere tegelijk kiezen). Je ziet per stap of en wanneer ze die afvinkten. Open daarna hun PowerPoint (gedeeld met jou op OneDrive) en geef per stap 0, 1 of 2 punten. Alles blijft bewaard in deze browser.</p>
+          <input type="file" id="imp" multiple accept=".json,application/json">
+          <p class="duolijst" style="margin-top:12px">${duos.map(([k, x]) => `<button data-duo="${esc(k)}" class="${k === actief ? "actief" : ""}">${esc(x.rapport.klas)} · ${esc(x.rapport.namen[0])} & ${esc(x.rapport.namen[1])} <span class="klein-tekst">${totaal(x)}/${MAX}</span></button>`).join("") || '<span class="klein-tekst">Nog geen rapporten ingelezen.</span>'}</p>
+          <div class="rapport-knoppen">
+            <button id="exp" ${duos.length ? "" : "disabled"}>Exporteer alle scores (Excel/CSV)</button>
+            <button class="tweede" onclick="window.print()" ${d ? "" : "disabled"}>Druk dit duo af</button>
+            <button class="tweede" id="wis" ${d ? "" : "disabled"}>Verwijder dit duo</button>
+          </div>
+        </div>
+        ${d ? duoHTML(d) : ""}`;
+      document.getElementById("imp").onchange = (e) => importeer(e.target.files);
+      document.getElementById("exp").onclick = exporteer;
+      const wis = document.getElementById("wis");
+      if (d) wis.onclick = () => { if (confirm("Dit duo en je scores verwijderen?")) { delete db.duos[actief]; actief = Object.keys(db.duos)[0] || null; bewaar(); toon(); } };
+      app.querySelectorAll("[data-duo]").forEach((b) => (b.onclick = () => { actief = b.dataset.duo; toon(); }));
+      app.querySelectorAll("[data-score]").forEach((b) => (b.onclick = () => {
+        const [id, v] = b.dataset.score.split("|");
+        d.scores[id] = d.scores[id] === +v ? undefined : +v;
+        bewaar(); toon();
+      }));
+      app.querySelectorAll("[data-opm]").forEach((t) => (t.onchange = () => { d.opm[t.dataset.opm] = t.value; bewaar(); }));
+      app.querySelectorAll("[data-alles2]").forEach((b) => (b.onclick = () => {
+        const nr = +b.dataset.alles2;
+        ALLE.filter((s) => s.les === nr && d.rapport.stappen[s.id]?.klaar && d.scores[s.id] === undefined).forEach((s) => (d.scores[s.id] = 2));
+        bewaar(); toon();
+      }));
+    }
+
+    function duoHTML(d) {
+      const r = d.rapport;
+      const vragen = (r.vragen || []).map((v, i) => `<tr><td>${i + 1}</td><td>${esc(v.vraag)}</td><td>${esc(v.juist)}</td><td>${esc(v.fout1)} / ${esc(v.fout2)}</td><td>${esc(v.plaats)}</td></tr>`).join("");
+      const fb = ["4.1", "4.2"].map((id) => {
+        const f = r.feedback?.[id]; if (!f) return "";
+        return `<p><b>Stap ${id}</b> – quiz van ${esc(f.duo)}: ${FEEDBACK_VRAGEN.filter((_, j) => f.checks?.[j]).length}/${FEEDBACK_VRAGEN.length} in orde.<br>Top: ${esc(f.top)}<br>Tip: ${esc(f.tip)}</p>`;
+      }).join("");
+      const refl = REFLECTIE_VRAGEN.map((q, i) => r.reflectie?.[i] ? `<p><b>${esc(q)}</b><br>${esc(r.reflectie[i])}</p>` : "").join("");
+      return `
+        <div class="kaart">
+          <h2>${esc(r.namen[0])} & ${esc(r.namen[1])} <span class="klein-tekst">(${esc(r.klas)})</span></h2>
+          <p>Thema: <b>${esc(r.thema || "nog niet gekozen")}</b> · Totaal: <b>${totaal(d)}/${MAX}</b> (${Math.round((totaal(d) / MAX) * 100)}%) · ${LESSEN.map((l) => `Les ${l.nr}: ${totaal(d, l.nr)}/${maxLes(l.nr)}`).join(" · ")}</p>
+          <p class="klein-tekst">Laatste rapport gedownload: ${tijd(r.gedownload)}</p>
+        </div>
+        ${vragen ? `<div class="kaart"><h3>Hun 5 vragen (stap 1.2)</h3><div class="tabel-scroll"><table class="score"><tr><th>#</th><th>Vraag</th><th>Juist</th><th>Fout</th><th>Plaats</th></tr>${vragen}</table></div></div>` : ""}
+        ${LESSEN.map((l) => `
+          <div class="kaart">
+            <h3>Les ${l.nr}: ${esc(l.titel)} <span class="klein-tekst">${totaal(d, l.nr)}/${maxLes(l.nr)}</span></h3>
+            <p class="geen-print"><button class="tweede klein" data-alles2="${l.nr}">Alle afgevinkte stappen zonder score op 2 zetten</button></p>
+            <div class="tabel-scroll"><table class="score">
+              <tr><th>Stap</th><th>Wat je nakijkt</th><th>Afgevinkt</th><th>Score</th><th>Opmerking</th></tr>
+              ${l.stappen.map((s) => {
+                const k = r.stappen?.[s.id]?.klaar;
+                const sc = d.scores[s.id];
+                return `<tr>
+                  <td><b>${s.id}</b><br>${esc(s.titel)}</td>
+                  <td>${esc(s.criterium)}</td>
+                  <td>${k ? "✓ " + tijd(k) : '<span style="color:#c0392b">niet</span>'}</td>
+                  <td><span class="scorek">${[0, 1, 2].map((v) => `<button class="s${v} ${sc === v ? "aan" : ""}" data-score="${s.id}|${v}" title="${["niet gedaan", "deels correct", "correct"][v]}">${v}</button>`).join("")}</span></td>
+                  <td><textarea data-opm="${s.id}" rows="1" style="min-height:36px">${esc(d.opm[s.id])}</textarea></td>
+                </tr>`;
+              }).join("")}
+            </table></div>
+          </div>`).join("")}
+        ${fb || refl ? `<div class="kaart"><h3>Les 4: feedback en terugblik</h3>${fb}${refl}</div>` : ""}`;
+    }
+
+    toon();
+  })();
+  </script>
+</body>
+</html>

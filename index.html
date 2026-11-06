@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ICT – 3 Zorg en Welzijn</title>
+  <link rel="stylesheet" href="kleuterquiz/style.css">
+  <style>
+    .tegels { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+    .tegel { display: block; color: inherit; text-decoration: none; margin: 0; }
+    .tegel:hover { border-color: var(--oranje); }
+    .tegel .tool { font-size: .85rem; font-weight: 700; color: var(--blauw); text-transform: uppercase; letter-spacing: .04em; }
+    .tegel h3 { margin: 6px 0; }
+    .tegel p { margin: 0; color: var(--zacht); font-size: .95rem; }
+  </style>
+</head>
+<body>
+  <header class="top"><div class="wrap"><h1>ICT – 3 Zorg en Welzijn</h1></div></header>
+  <main class="wrap">
+    <p>Kies de opdracht die je leerkracht opgeeft.</p>
+    <div class="tegels">
+      <!-- Nieuwe opdracht? Kopieer een tegel en pas de link en de tekst aan. -->
+      <a class="kaart tegel" href="kleuterquiz/">
+        <span class="tool">PowerPoint · per 2</span>
+        <h3>Kleuterquiz</h3>
+        <p>Maak een klikbare quiz over gezondheid voor kleuters.</p>
+      </a>
+    </div>
+  </main>
+</body>
+</html>
