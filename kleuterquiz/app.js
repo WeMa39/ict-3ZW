@@ -152,7 +152,7 @@
       </div>
       <div class="stap-body">
         ${les.nr < 4 ? `<div class="rol">🖱️ Aan de muis: <b>${esc(muis)}</b> · 👀 Kijkt mee en leest voor: <b>${esc(naast)}</b></div>` : ""}
-        <ol class="uitleg">${s.uitleg.map((u) => `<li>${u}</li>`).join("")}</ol>
+        <ol class="uitleg">${s.uitleg.map((u, j) => typeof u === "string" ? `<li>${u}</li>` : `<li>${u.t}${u.b && window.tekenBeeld ? window.tekenBeeld(u.b, s.id + "-" + (j + 1)) : ""}</li>`).join("")}</ol>
         ${s.voorbeeld ? `<div class="voorbeeld"><b>Voorbeeld:</b> ${esc(s.voorbeeld)}</div>` : ""}
         ${s.type === "thema" ? themaHTML() : ""}
         ${s.type === "vragen" ? vragenHTML() : ""}

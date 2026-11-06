@@ -1,6 +1,8 @@
 // Inhoud van de leeromgeving. Elke stap wordt beoordeeld op 2 punten:
 // 0 = niet gedaan, 1 = gedaan maar niet helemaal correct, 2 = correct.
-// Pas teksten gerust aan: de leerkrachtpagina leest dezelfde lijst.
+// Een uitleg-regel is ofwel tekst, ofwel { t: "tekst", b: beeld }.
+// Beelden zijn nagebootste PowerPoint-schermen (zie beelden.js). Een rood kader met
+// een nummer duidt aan waar de leerling moet klikken.
 
 const THEMAS = [
   "Handjes wassen",
@@ -11,6 +13,66 @@ const THEMAS = [
   "Zon en drinken in de zomer",
   "Warm aankleden in de winter",
   "Afval sorteren",
+];
+
+// ───────── Bouwstenen voor de beelden ─────────
+const K = (l, i, acc, extra) => Object.assign({ l, i, acc }, extra || {});
+const KK = (l, i, acc, extra) => Object.assign({ l, i, acc, klein: true }, extra || {});
+const VELD = (l, acc, extra) => Object.assign({ soort: "veld", l, acc }, extra || {});
+const CHECK = (l, acc, aan) => ({ soort: "check", l, acc, aan });
+const DUIM = (l, i, acc, stijl) => ({ soort: "duim", l, i, acc, stijl });
+const G = (naam, knoppen, rij) => ({ naam, knoppen, rij });
+const LINT = (tab, groepen, extra) => Object.assign({ type: "lint", tab, groepen }, extra || {});
+const TABS_AFB = ["Bestand", "Start", "Invoegen", "Ontwerpen", "Overgangen", "Animaties", "Diavoorstelling", "Beeld", "Afbeeldingsopmaak"];
+const TABS_VORM = ["Bestand", "Start", "Invoegen", "Ontwerpen", "Overgangen", "Animaties", "Diavoorstelling", "Beeld", "Vormopmaak"];
+const TABS_AUDIO = ["Bestand", "Start", "Invoegen", "Ontwerpen", "Animaties", "Diavoorstelling", "Audio-opmaak", "Afspelen"];
+
+const START_DIAS = G("Dia's", [K("Nieuwe dia", "🗔", 0, { menu: true }), KK("Indeling", "▦"), KK("Opnieuw instellen", "↺")]);
+const START_LETTER = (a1, a2) => G("Lettertype", [VELD("Century Gothic", a1, { w: 120 }), VELD("54", a2), KK("B", "", 0), KK("I", "", 0), KK("U", "", 0)]);
+
+const INVOEGEN = (accs) => {
+  const a = accs || {};
+  return LINT("Invoegen", [
+    G("Dia's", [K("Nieuwe dia", "🗔")]),
+    G("Afbeeldingen", [K("Afbeeldingen", "🖼️", a.afb, { menu: true })]),
+    G("Illustraties", [K("Vormen", "🔷", a.vormen, { menu: true }), K("Pictogrammen", "☺")]),
+    G("Koppelingen", [K("Koppeling", "🔗", a.koppeling), K("Actie", "⭐", a.actie)]),
+    G("Tekst", [K("Tekstvak", "🅰")]),
+    G("Media", [K("Video", "🎬", 0, { menu: true }), K("Audio", "🔊", a.audio, { menu: true })]),
+  ]);
+};
+
+const KOPPEL_DIAS = [
+  "1. Handjes wassen, hoe doe jij dat?",
+  "2. Hoe speel je?",
+  "3. Wanneer was je je handen?",
+  "4. Goed zo!",
+  "5. Waarmee was je je handen?",
+  "6. Goed zo!",
+  "…",
+  "13. Oei, probeer nog eens!",
+  "14. Bravo!",
+];
+const KOPPELVENSTER = (kies, acc) => ({
+  type: "venster",
+  titel: "Hyperlink invoegen",
+  linksKop: "Koppelen aan:",
+  links: [{ l: "Bestaand bestand of webpagina" }, { l: "Plaats in dit document", aan: true, acc: acc ? acc[0] : 0 }, { l: "Nieuw document maken" }, { l: "E-mailadres" }],
+  lijstKop: "Selecteer een plaats in dit document:",
+  lijst: [{ l: "Eerste dia" }, { l: "Laatste dia" }, { l: "Volgende dia" }, { l: "Vorige dia" }, { l: "▾ Diatitels" }].concat(
+    KOPPEL_DIAS.map((d) => ({ l: d, in: true, aan: d === kies, acc: d === kies && acc ? acc[1] : 0 }))
+  ),
+  knoppen: [{ l: "OK", acc: acc ? acc[2] : 0 }, "Annuleren"],
+});
+
+const QUIZ_DIAS = [
+  { t: "Titel", k: "titel" }, { t: "Hoe speel je?", k: "titel" },
+  { t: "Vraag 1", k: "vraag" }, { t: "Goed zo!", k: "goed" },
+  { t: "Vraag 2", k: "vraag" }, { t: "Goed zo!", k: "goed" },
+  { t: "Vraag 3", k: "vraag" }, { t: "Goed zo!", k: "goed" },
+  { t: "Vraag 4", k: "vraag" }, { t: "Goed zo!", k: "goed" },
+  { t: "Vraag 5", k: "vraag" }, { t: "Goed zo!", k: "goed" },
+  { t: "Oei!", k: "oei" }, { t: "Bravo!", k: "titel" },
 ];
 
 const LESSEN = [
@@ -55,16 +117,36 @@ const LESSEN = [
         titel: "Maak je PowerPoint-bestand",
         nieuw: true,
         uitleg: [
-          "Ga naar <b>www.office.com</b> en meld je aan met je schoolaccount.",
-          "Klik links op <b>PowerPoint</b> (het oranje icoontje met een P).",
-          "Kies <b>Lege presentatie</b>.",
-          "Klik bovenaan op de titel \"Presentatie\" en typ de naam: <b>klas_Kleuterquiz_thema_voornaam1_voornaam2</b>.",
-          "Klik op het mapje bij <b>Locatie</b> en kies je OneDrive-map <b>Informatica/PowerPoint</b>. Bestaat de map nog niet? Maak ze dan eerst aan op OneDrive.",
+          "Open PowerPoint.",
+          {
+            t: "Kies <b>Lege presentatie</b>.",
+            b: { type: "start", uitleg: "Klik op Lege presentatie (1)." },
+          },
+          {
+            t: "Klik linksboven op <b>Bestand</b> en kies <b>Opslaan als</b>. Klik op <b>OneDrive</b> en open de map <b>Informatica</b> en dan <b>PowerPoint</b>. Bestaat de map PowerPoint nog niet? Klik dan op <b>Nieuwe map</b>.",
+            b: {
+              type: "backstage", kies: "Opslaan als", acc: 1,
+              inhoud: '<div class="pp-plek aan acc" data-n="2">☁️ OneDrive – school</div><div class="pp-plek">💻 Deze pc</div><div class="pp-plek">📁 Bladeren</div><div style="margin-top:8px;color:#605e5c">OneDrive › Informatica › PowerPoint</div>',
+              uitleg: "Bestand → Opslaan als (1) → OneDrive (2).",
+            },
+          },
+          {
+            t: "Typ als bestandsnaam: <b>klas_Kleuterquiz_thema_voornaam1_voornaam2</b> en klik op <b>Opslaan</b>.",
+            b: {
+              type: "venster", titel: "Opslaan als", smal: true,
+              velden: [{ label: "Bestandsnaam", l: "3ZW_Kleuterquiz_Handjes wassen_Lotte_Yassin", acc: 1 }, { label: "Opslaan als", l: "PowerPoint-presentatie (*.pptx)", menu: true }],
+              knoppen: [{ l: "Opslaan", hoofd: true, acc: 2 }, "Annuleren"],
+              uitleg: "Typ de naam (1) en klik op Opslaan (2).",
+            },
+          },
+          {
+            t: "Kijk linksboven: de schakelaar <b>Automatisch opslaan</b> staat nu aan. Vanaf nu bewaart PowerPoint alles vanzelf.",
+            b: { type: "titelbalk", acc: { autosave: 1 }, uitleg: "Automatisch opslaan staat aan (1)." },
+          },
         ],
-        tip: "PowerPoint bewaart automatisch. Je hoeft nooit op Opslaan te klikken zolang je online werkt.",
         check: [
           "Het bestand heeft de juiste naam.",
-          "Het bestand staat in de map Informatica/PowerPoint.",
+          "Het bestand staat in de map Informatica/PowerPoint op OneDrive.",
         ],
         criterium: "Bestand met correcte naam in de juiste OneDrive-map.",
       },
@@ -73,11 +155,27 @@ const LESSEN = [
         titel: "Deel het bestand met je partner en je leerkracht",
         nieuw: true,
         uitleg: [
-          "Klik rechtsboven op <b>Delen</b>.",
-          "Typ de naam van je partner en de naam van je leerkracht.",
-          "Kijk of er <b>Kan bewerken</b> staat. Zo niet, klik erop en kies het.",
-          "Klik op <b>Verzenden</b>.",
-          "Je partner opent het bestand via de mail of via OneDrive → <b>Gedeeld</b>. Zien jullie allebei hetzelfde bestand? Dan kunnen jullie voortaan samen werken.",
+          {
+            t: "Klik rechtsboven op <b>Delen</b>.",
+            b: { type: "titelbalk", acc: { delen: 1 }, uitleg: "De knop Delen staat rechtsboven (1)." },
+          },
+          {
+            t: "Typ de naam van je partner en de naam van je leerkracht. Kijk of er <b>Kan bewerken</b> staat en klik op <b>Verzenden</b>.",
+            b: {
+              type: "venster", titel: "Delen: klas_Kleuterquiz_…", smal: true,
+              velden: [{ label: "Naam, groep of e-mailadres", l: "Yassin El Amrani; mevrouw …", acc: 1 }, { label: "", l: "✏️ Kan bewerken", menu: true, acc: 2 }, { label: "Bericht (optioneel)", l: "" }],
+              knoppen: [{ l: "Verzenden", hoofd: true, acc: 3 }],
+              uitleg: "Namen typen (1), Kan bewerken (2), Verzenden (3).",
+            },
+          },
+          {
+            t: "Je partner opent PowerPoint, klikt op <b>Bestand</b> → <b>Openen</b> → <b>Gedeeld met mij</b> en opent jullie bestand. Zien jullie allebei hetzelfde bestand? Dan kunnen jullie voortaan samen werken.",
+            b: {
+              type: "backstage", kies: "Openen", acc: 0,
+              inhoud: '<div class="pp-plek">🕘 Recent</div><div class="pp-plek aan acc" data-n="1">👥 Gedeeld met mij</div><div class="pp-plek">☁️ OneDrive – school</div><div style="margin-top:8px">📊 3ZW_Kleuterquiz_Handjes wassen_Lotte_Yassin</div>',
+              uitleg: "Je partner vindt het bestand bij Gedeeld met mij (1).",
+            },
+          },
         ],
         check: [
           "Mijn partner kan het bestand openen en bewerken.",
@@ -90,9 +188,15 @@ const LESSEN = [
         titel: "Kies een ontwerp",
         nieuw: true,
         uitleg: [
-          "Klik bovenaan op het tabblad <b>Ontwerpen</b>.",
-          "Klik op een ontwerp om het te proberen. Kies een vrolijk ontwerp met een <b>lichte achtergrond</b>.",
-          "Wil je een andere kleur? Kijk rechts naast de ontwerpen bij <b>Varianten</b>.",
+          {
+            t: "Klik bovenaan op het tabblad <b>Ontwerpen</b>. Je ziet nu een rij ontwerpen. Klik op een ontwerp om het te proberen en kies een vrolijk ontwerp met een <b>lichte achtergrond</b>.",
+            b: LINT("Ontwerpen", [
+              G("Thema's", [DUIM("", "Aa", 0), DUIM("", "Aa", 1, "background:#fff3c4;color:#c45800"), DUIM("", "Aa", 0, "background:#2b579a;color:#fff"), DUIM("", "Aa", 0, "background:#e3f4e8;color:#1e8449"), DUIM("", "Aa", 0, "background:#3b3b3b;color:#fff")], false),
+              G("Varianten", [DUIM("", "", 0, "background:#fff3c4"), DUIM("", "", 0, "background:#ffd9c4"), DUIM("", "", 0, "background:#d6ecff"), K("Meer", "▾", 2)]),
+              G("Aanpassen", [K("Diagrootte", "▭", 0, { menu: true }), K("Achtergrond opmaken", "🎨")]),
+            ], { tabAcc: 0, uitleg: "Tabblad Ontwerpen: kies een thema (1). Andere kleur? Kijk bij Varianten (2)." }),
+          },
+          "Wil je een andere kleur? Klik rechts naast de ontwerpen op een van de <b>Varianten</b>.",
         ],
         tip: "Kleuters houden van kleur, maar donkere tekst op een lichte achtergrond blijft het best leesbaar.",
         check: ["We hebben een ontwerp met een lichte achtergrond gekozen."],
@@ -102,9 +206,14 @@ const LESSEN = [
         id: "1.6",
         titel: "Maak de titeldia",
         uitleg: [
-          "Klik in het grote vak op de eerste dia en typ de titel van je quiz, bv. \"Handjes wassen, hoe doe jij dat?\".",
-          "Klik in het kleine vak en typ: <b>Een quiz van</b> + jullie voornamen.",
-          "Selecteer de titel. Zet de tekengrootte op minstens <b>54</b> en kies een rond, duidelijk lettertype, bv. <b>Century Gothic</b> of <b>Comic Sans MS</b>. Dat werkt net zoals in Word, via het tabblad <b>Start</b>.",
+          {
+            t: "Klik op de eerste dia in het grote vak en typ de titel van je quiz, bv. \"Handjes wassen, hoe doe jij dat?\". Klik in het kleine vak en typ: <b>Een quiz van</b> + jullie voornamen.",
+            b: { type: "dia", titel: "Handjes wassen, hoe doe jij dat?", titelAcc: 1, onder: "Een quiz van Lotte en Yassin", onderAcc: 2, achtergrond: "#fff3c4", uitleg: "Titel in het grote vak (1), jullie namen in het kleine vak (2)." },
+          },
+          {
+            t: "Selecteer de titel. Kies op het tabblad <b>Start</b> een rond, duidelijk lettertype, bv. <b>Century Gothic</b> of <b>Comic Sans MS</b>, en zet de tekengrootte op minstens <b>54</b>. Dat werkt net zoals in Word.",
+            b: LINT("Start", [G("Klembord", [K("Plakken", "📋")]), START_DIAS, START_LETTER(1, 2), G("Alinea", [KK("", "≡"), KK("", "☰")])], { uitleg: "Lettertype (1) en tekengrootte (2) op het tabblad Start." }),
+          },
         ],
         check: [
           "De titel en onze namen staan op de eerste dia.",
@@ -117,10 +226,18 @@ const LESSEN = [
         titel: "Maak de uitlegdia",
         nieuw: true,
         uitleg: [
-          "Klik op het tabblad <b>Start</b> op het pijltje onder <b>Nieuwe dia</b>.",
-          "Kies de indeling <b>Titel en inhoud</b>. Links zie je nu 2 dia's.",
-          "Typ als titel: <b>Hoe speel je?</b>",
-          "Typ in het inhoudsvak 3 korte zinnen voor de juf: \"Lees de vraag voor.\", \"Laat de kleuter een prent aantikken.\", \"Juist of fout? De computer zegt het!\"",
+          {
+            t: "Klik op het tabblad <b>Start</b> op het pijltje onder <b>Nieuwe dia</b>.",
+            b: LINT("Start", [G("Klembord", [K("Plakken", "📋")]), G("Dia's", [K("Nieuwe dia", "🗔", 1, { menu: true }), KK("Indeling", "▦")]), START_LETTER()], { uitleg: "Klik op het pijltje onder Nieuwe dia (1)." }),
+          },
+          {
+            t: "Kies de indeling <b>Titel en object</b>. Links zie je nu 2 dia's.",
+            b: { type: "indelingen", kies: "Titel en object", smal: true, uitleg: "Kies Titel en object (1)." },
+          },
+          {
+            t: "Typ als titel: <b>Hoe speel je?</b> Typ in het grote vak 3 korte zinnen voor de juf: \"Lees de vraag voor.\", \"Laat de kleuter een prent aantikken.\", \"Juist of fout? De computer zegt het!\"",
+            b: { type: "dia", titel: "Hoe speel je?", lijst: ["Lees de vraag voor.", "Laat de kleuter een prent aantikken.", "Juist of fout? De computer zegt het!"], achtergrond: "#fff3c4", uitleg: "Zo ziet je uitlegdia eruit." },
+          },
         ],
         check: ["Dia 2 heeft de titel \"Hoe speel je?\" en 3 zinnen uitleg."],
         criterium: "Uitlegdia met titel en 3 duidelijke zinnen.",
@@ -130,7 +247,10 @@ const LESSEN = [
         titel: "Maak je eerste vraagdia",
         nieuw: true,
         uitleg: [
-          "Klik op <b>Nieuwe dia</b> en kies de indeling <b>Alleen titel</b>.",
+          {
+            t: "Klik weer op het pijltje onder <b>Nieuwe dia</b> en kies nu de indeling <b>Alleen titel</b>.",
+            b: { type: "indelingen", kies: "Alleen titel", smal: true, uitleg: "Kies Alleen titel (1)." },
+          },
           "Typ vraag 1 (die van stap 1.2) in het titelvak.",
           "Gebruik hetzelfde lettertype als op je titeldia, minstens <b>40</b> pt.",
         ],
@@ -142,10 +262,30 @@ const LESSEN = [
         titel: "Voeg 3 prenten in",
         nieuw: true,
         uitleg: [
-          "Klik op <b>Invoegen</b> → <b>Afbeeldingen</b> → <b>Stockafbeeldingen</b>. Zoek met een Nederlands woord, bv. \"toilet\". Kies een prent en klik op <b>Invoegen</b>.",
+          {
+            t: "Klik op het tabblad <b>Invoegen</b> op <b>Afbeeldingen</b> en kies <b>Stockafbeeldingen</b>.",
+            b: { delen: [INVOEGEN({ afb: 1 }), { type: "menu", items: [{ l: "Dit apparaat…", i: "💻" }, { l: "Stockafbeeldingen…", i: "🖼️", acc: 2 }, { l: "Onlineafbeeldingen…", i: "🌐" }] }], uitleg: "Invoegen → Afbeeldingen (1) → Stockafbeeldingen (2)." },
+          },
+          {
+            t: "Typ een Nederlands woord in het zoekvak, bv. \"toilet\". Klik op een prent en klik op <b>Invoegen</b>.",
+            b: {
+              type: "venster", titel: "Stockafbeeldingen",
+              extra: '<div class="pp-zoek acc" data-n="1">🔍 toilet</div><div class="pp-raster"><span class="aan acc" data-n="2">🚽</span><span>🧻</span><span>🚻</span><span>🧼</span><span>🚿</span></div>',
+              knoppen: [{ l: "Invoegen (1)", hoofd: true, acc: 3 }, "Annuleren"],
+              uitleg: "Zoeken (1), prent kiezen (2), Invoegen (3).",
+            },
+          },
           "Of zoek een pictogram op <b>www.sclera.be</b>, kopieer het (rechtermuisknop → Afbeelding kopiëren) en plak het op je dia.",
           "Voeg zo 3 prenten in: de juiste en de 2 foute antwoorden.",
-          "Klik op een prent en ga naar het tabblad <b>Afbeelding</b> (of <b>Afbeeldingsopmaak</b>). Zet de <b>hoogte</b> op <b>6 cm</b>. Doe dat voor alle 3 de prenten.",
+          {
+            t: "Klik op een prent. Bovenaan verschijnt het tabblad <b>Afbeeldingsopmaak</b>. Zet helemaal rechts de <b>hoogte</b> op <b>6 cm</b>. Doe dat voor alle 3 de prenten.",
+            b: LINT("Afbeeldingsopmaak", [
+              G("Aanpassen", [K("Achtergrond verwijderen", "✂️"), K("Correcties", "☀️", 0, { menu: true })]),
+              G("Toegankelijkheid", [K("Alternatieve tekst", "💬")]),
+              G("Schikken", [KK("Naar voren", "⬆"), KK("Uitlijnen", "⫶", 0, { menu: true })], true),
+              G("Grootte", [K("Bijsnijden", "⛶"), VELD("6 cm", 1, { label: "↕" }), VELD("6 cm", 0, { label: "↔" })], false),
+            ], { tabs: TABS_AFB, uitleg: "Tabblad Afbeeldingsopmaak: hoogte op 6 cm (1)." }),
+          },
         ],
         tip: "Gebruik geen foto's van echte kinderen die je online vindt. Pictogrammen of tekeningen zijn veiliger en duidelijker voor kleuters.",
         check: [
@@ -159,9 +299,17 @@ const LESSEN = [
         titel: "Zet de prenten netjes op een rij",
         nieuw: true,
         uitleg: [
-          "Klik op de eerste prent, houd <b>Shift</b> ingedrukt en klik op de andere 2. Nu zijn ze alle 3 geselecteerd.",
-          "Ga naar <b>Start</b> → <b>Schikken</b> → <b>Uitlijnen</b> en kies <b>Onderkant uitlijnen</b>.",
-          "Ga nog eens naar <b>Schikken</b> → <b>Uitlijnen</b> en kies <b>Horizontaal verdelen</b>.",
+          {
+            t: "Klik op de eerste prent, houd <b>Shift</b> ingedrukt en klik op de andere 2. Nu zijn ze alle 3 geselecteerd.",
+            b: { type: "dia", titel: "Wanneer was je je handen?", prenten: ["📺", "😴", "🚽"], selectie: true, achtergrond: "#fff3c4", uitleg: "Alle 3 de prenten zijn geselecteerd (blauwe kaders)." },
+          },
+          {
+            t: "Ga naar <b>Afbeeldingsopmaak</b> → <b>Uitlijnen</b> en kies <b>Onder uitlijnen</b>. Klik daarna nog eens op <b>Uitlijnen</b> en kies <b>Horizontaal verdelen</b>.",
+            b: { delen: [
+              LINT("Afbeeldingsopmaak", [G("Toegankelijkheid", [K("Alternatieve tekst", "💬")]), G("Schikken", [KK("Naar voren", "⬆"), KK("Naar achteren", "⬇"), KK("Uitlijnen", "⫶", 1, { menu: true })], true), G("Grootte", [VELD("6 cm", 0, { label: "↕" })])], { tabs: TABS_AFB, titelbalk: false }),
+              { type: "menu", items: [{ l: "Links uitlijnen" }, { l: "Centreren" }, { l: "Rechts uitlijnen" }, "-", { l: "Boven uitlijnen" }, { l: "Midden uitlijnen" }, { l: "Onder uitlijnen", acc: 2 }, "-", { l: "Horizontaal verdelen", acc: 3 }, { l: "Verticaal verdelen" }] },
+            ], uitleg: "Uitlijnen (1) → Onder uitlijnen (2). Daarna Uitlijnen → Horizontaal verdelen (3)." },
+          },
           "Controleer: staat de juiste prent op de plaats die je in stap 1.2 koos?",
           "Druk op <b>F5</b> om je quiz te bekijken. Druk op <b>Esc</b> om te stoppen.",
         ],
@@ -184,25 +332,38 @@ const LESSEN = [
     stappen: [
       {
         id: "2.1",
-        titel: "Open je quiz in de PowerPoint-app",
-        nieuw: true,
+        titel: "Open jullie quiz",
         uitleg: [
-          "Ga naar <b>www.office.com</b> → <b>OneDrive</b> en open de map <b>Informatica/PowerPoint</b>. Werkt je partner? Kijk dan bij <b>Gedeeld</b>.",
-          "Open jullie bestand.",
-          "Klik bovenaan op <b>Bewerken</b> → <b>Openen in bureaubladapp</b> (of: <b>Openen in app</b>). Het blijft hetzelfde gedeelde bestand.",
+          {
+            t: "Open PowerPoint en klik op <b>Bestand</b> → <b>Openen</b>. Jullie bestand staat bij <b>Recent</b>. Staat het er niet? Kijk dan bij <b>Gedeeld met mij</b>.",
+            b: {
+              type: "backstage", kies: "Openen", acc: 1,
+              inhoud: '<div class="pp-plek aan acc" data-n="2">🕘 Recent</div><div class="pp-plek">👥 Gedeeld met mij</div><div class="pp-plek">☁️ OneDrive – school</div><div style="margin-top:8px">📊 3ZW_Kleuterquiz_Handjes wassen_Lotte_Yassin</div>',
+              uitleg: "Bestand → Openen (1) → Recent (2).",
+            },
+          },
+          "Kijk linksboven of <b>Automatisch opslaan</b> aan staat. Dan werken jullie in het gedeelde bestand en niet in een kopie.",
         ],
-        tip: "Vanaf nu werken jullie in de app op de pc. Knoppen naar andere dia's, geluid opnemen en de kiosk-modus werken daar het best.",
-        check: ["Ons bestand is open in de PowerPoint-app op de pc."],
-        criterium: "Gedeeld bestand geopend in de app (geen kopie gemaakt).",
+        check: ["Ons gedeelde bestand is open en Automatisch opslaan staat aan."],
+        criterium: "Gedeeld bestand geopend (geen kopie gemaakt).",
       },
       {
         id: "2.2",
         titel: "Maak vraag 2 tot en met 5",
         nieuw: true,
         uitleg: [
-          "Klik links met de <b>rechtermuisknop</b> op vraag 1 en kies <b>Dia dupliceren</b>. Je krijgt een kopie.",
+          {
+            t: "Klik links met de <b>rechtermuisknop</b> op vraag 1 en kies <b>Dia dupliceren</b>. Je krijgt een kopie.",
+            b: { type: "menu", smal: true, items: [{ l: "Knippen", i: "✂️" }, { l: "Kopiëren", i: "📄" }, { l: "Plakopties:", i: "📋" }, "-", { l: "Nieuwe dia", i: "🗔" }, { l: "Dia dupliceren", i: "⧉", acc: 1 }, { l: "Dia verwijderen", i: "🗑️" }, "-", { l: "Indeling", i: "▦", sub: true }], uitleg: "Rechtermuisknop op de dia links → Dia dupliceren (1)." },
+          },
           "Typ op de kopie vraag 2.",
-          "Klik met de rechtermuisknop op een prent → <b>Afbeelding wijzigen</b> → <b>Stockafbeeldingen</b> (of <b>Van dit apparaat</b>). Zo blijft de grootte en de plaats hetzelfde.",
+          {
+            t: "Klik met de rechtermuisknop op een prent → <b>Afbeelding wijzigen</b> → <b>Van stockafbeeldingen</b>. Zo blijven de grootte en de plaats hetzelfde.",
+            b: { delen: [
+              { type: "menu", items: [{ l: "Knippen", i: "✂️" }, { l: "Kopiëren", i: "📄" }, "-", { l: "Afbeelding wijzigen", i: "🖼️", sub: true, acc: 1 }, { l: "Groeperen", i: "▣", sub: true }, { l: "Koppeling", i: "🔗" }, { l: "Alternatieve tekst bekijken…", i: "💬" }] },
+              { type: "menu", kop: "Afbeelding wijzigen", items: [{ l: "Uit een bestand…", i: "💻" }, { l: "Van stockafbeeldingen…", i: "🖼️", acc: 2 }, { l: "Van online bronnen…", i: "🌐" }, { l: "Van pictogrammen", i: "☺" }, { l: "Van klembord", i: "📋" }] },
+            ], uitleg: "Afbeelding wijzigen (1) → Van stockafbeeldingen (2)." },
+          },
           "Zet de juiste prent op de plaats die je in stap 1.2 koos.",
           "Herhaal tot je 5 vraagdia's hebt.",
         ],
@@ -217,8 +378,14 @@ const LESSEN = [
         titel: "Noteer de juiste prent in de notities",
         nieuw: true,
         uitleg: [
-          "Klik onderaan het scherm op <b>Notities</b>. Er verschijnt een vak onder je dia.",
-          "Typ bij elke vraag welke prent juist is, bv. <b>Juist = rechts</b>.",
+          {
+            t: "Klik onderaan het scherm op <b>Notities</b>. Er verschijnt een vak onder je dia.",
+            b: { type: "statusbalk", acc: 1, uitleg: "De knop Notities staat onderaan (1)." },
+          },
+          {
+            t: "Typ bij elke vraag welke prent juist is, bv. <b>Juist = rechts</b>.",
+            b: { type: "dia", titel: "Wanneer was je je handen?", prenten: ["📺", "😴", "🚽"], achtergrond: "#fff3c4", notities: "Juist = rechts", notAcc: 1, uitleg: "In het notitievak (1) schrijf je welke prent juist is." },
+          },
         ],
         tip: "De kleuter ziet de notities niet. Ze helpen jou straks bij het maken van de knoppen.",
         check: ["Bij elke vraag staat in de notities welke prent juist is."],
@@ -228,11 +395,16 @@ const LESSEN = [
         id: "2.4",
         titel: "Maak de Goed-zo-dia's",
         uitleg: [
-          "Klik op vraag 1. Klik op <b>Nieuwe dia</b> → <b>Alleen titel</b>.",
-          "Typ <b>Goed zo!</b> in een groene, grote letter (minstens 66 pt).",
-          "Voeg een vrolijke prent toe: een duim, een ster of een lachend gezicht.",
+          "Klik op vraag 1. Klik op het pijltje onder <b>Nieuwe dia</b> en kies <b>Alleen titel</b>.",
+          {
+            t: "Typ <b>Goed zo!</b> in een groene, grote letter (minstens 66 pt) en voeg een vrolijke prent toe: een duim, een ster of een lachend gezicht.",
+            b: { type: "dia", titel: "Goed zo!", titelStijl: "color:#1e8449;font-size:30px;border:0", prenten: ["⭐"], achtergrond: "#fff3c4", uitleg: "Zo kan een Goed-zo-dia eruitzien." },
+          },
           "Dupliceer deze dia 4 keer.",
-          "Sleep de kopieën links in het overzicht naar de juiste plaats. Na elke vraag komt zijn eigen Goed-zo-dia: vraag 1, goed zo, vraag 2, goed zo, …",
+          {
+            t: "Sleep de kopieën links in het overzicht naar de juiste plaats. Na elke vraag komt zijn eigen Goed-zo-dia.",
+            b: { type: "overzicht", dias: QUIZ_DIAS.slice(0, 12), uitleg: "De volgorde: vraag 1, Goed zo, vraag 2, Goed zo, …" },
+          },
         ],
         check: [
           "Na elke vraag staat een Goed-zo-dia.",
@@ -247,7 +419,10 @@ const LESSEN = [
           "Klik op de laatste dia en maak 2 nieuwe dia's met de indeling <b>Alleen titel</b>.",
           "Oei-dia: typ <b>Oei, probeer nog eens!</b> in oranje en voeg een vriendelijke prent toe. Nooit een boos of huilend gezicht: de kleuter mag zich niet slecht voelen.",
           "Slotdia: typ <b>Bravo! Je weet alles over …</b> + jullie thema.",
-          "Controleer de volgorde: titel, uitleg, 5 keer vraag + goed zo, Oei, slot. Dat zijn <b>14 dia's</b>.",
+          {
+            t: "Controleer de volgorde. Jullie quiz heeft nu <b>14 dia's</b>.",
+            b: { type: "overzicht", dias: QUIZ_DIAS, uitleg: "Alle 14 dia's in de juiste volgorde. De Oei-dia is dia 13." },
+          },
         ],
         check: [
           "Er is een vriendelijke Oei-dia en een slotdia.",
@@ -261,12 +436,17 @@ const LESSEN = [
         nieuw: true,
         uitleg: [
           "Ga naar vraag 1 en klik op de <b>juiste</b> prent (kijk in je notities).",
-          "Klik op <b>Invoegen</b> → <b>Koppeling</b>.",
-          "Kies links <b>Plaats in dit document</b>.",
-          "Kies de Goed-zo-dia die net na vraag 1 komt en klik op <b>OK</b>.",
+          {
+            t: "Klik op het tabblad <b>Invoegen</b> op <b>Koppeling</b>.",
+            b: Object.assign(INVOEGEN({ koppeling: 1 }), { uitleg: "Invoegen → Koppeling (1)." }),
+          },
+          {
+            t: "Kies links <b>Plaats in dit document</b>. Kies de Goed-zo-dia die net na vraag 1 komt (dia 4) en klik op <b>OK</b>.",
+            b: Object.assign(KOPPELVENSTER("4. Goed zo!", [1, 2, 3]), { uitleg: "Plaats in dit document (1) → de juiste Goed-zo-dia (2) → OK (3). Kijk naar het nummer van de dia!" }),
+          },
           "Doe hetzelfde voor de juiste prent van vraag 2 tot en met 5. Telkens naar de Goed-zo-dia die direct na die vraag komt.",
         ],
-        tip: "Fout gekoppeld? Klik met de rechtermuisknop op de prent → <b>Koppeling bewerken</b>.",
+        tip: "Alle Goed-zo-dia's heten hetzelfde. Kijk daarom naar het <b>nummer</b> voor de naam: vraag 1 gaat naar dia 4, vraag 2 naar dia 6, vraag 3 naar dia 8, vraag 4 naar dia 10 en vraag 5 naar dia 12. Fout gekoppeld? Rechtermuisknop op de prent → <b>Koppeling bewerken</b>.",
         check: ["Bij alle 5 vragen gaat de juiste prent naar de juiste Goed-zo-dia."],
         criterium: "5 juiste prenten correct gekoppeld aan de bijhorende Goed-zo-dia.",
       },
@@ -275,7 +455,10 @@ const LESSEN = [
         titel: "Maak van de foute prenten een knop",
         uitleg: [
           "Klik op vraag 1 op een <b>foute</b> prent.",
-          "Klik op <b>Invoegen</b> → <b>Koppeling</b> → <b>Plaats in dit document</b> en kies de <b>Oei-dia</b>.",
+          {
+            t: "Klik op <b>Invoegen</b> → <b>Koppeling</b> → <b>Plaats in dit document</b> en kies dia 13, de <b>Oei-dia</b>. Klik op <b>OK</b>.",
+            b: Object.assign(KOPPELVENSTER("13. Oei, probeer nog eens!", [1, 2, 3]), { uitleg: "Plaats in dit document (1) → de Oei-dia (2) → OK (3)." }),
+          },
           "Doe hetzelfde voor de tweede foute prent.",
           "Herhaal voor vraag 2 tot en met 5. Dat zijn 10 foute prenten in totaal.",
         ],
@@ -287,11 +470,17 @@ const LESSEN = [
         titel: "Maak de Verder-pijlen",
         nieuw: true,
         uitleg: [
-          "Ga naar de eerste Goed-zo-dia. Klik op <b>Invoegen</b> → <b>Vormen</b> en kies de <b>pijl naar rechts</b>.",
-          "Teken de pijl rechtsonder op de dia. Klik erin en typ <b>Verder</b>.",
-          "Klik op de rand van de pijl en koppel hem met <b>Invoegen</b> → <b>Koppeling</b> → <b>Plaats in dit document</b> aan <b>vraag 2</b>.",
+          {
+            t: "Ga naar de eerste Goed-zo-dia. Klik op <b>Invoegen</b> → <b>Vormen</b> en kies bij <b>Blokpijlen</b> de <b>pijl naar rechts</b>.",
+            b: { delen: [INVOEGEN({ vormen: 1 }), { type: "menu", kop: "Blokpijlen", items: [{ l: "Pijl: rechts", i: "➡️", acc: 2 }, { l: "Pijl: links", i: "⬅️" }, { l: "Pijl: omhoog", i: "⬆️" }, { l: "Pijl: omlaag", i: "⬇️" }] }], uitleg: "Invoegen → Vormen (1) → Pijl: rechts (2)." },
+          },
+          {
+            t: "Teken de pijl rechtsonder op de dia. Klik erin en typ <b>Verder</b>.",
+            b: { type: "dia", titel: "Goed zo!", titelStijl: "color:#1e8449;font-size:30px;border:0", prenten: ["⭐"], vorm: { soort: "pijl-r", l: "Verder" }, achtergrond: "#fff3c4", uitleg: "De Verder-pijl staat rechtsonder." },
+          },
+          "Klik op de rand van de pijl en koppel hem met <b>Invoegen</b> → <b>Koppeling</b> → <b>Plaats in dit document</b> aan <b>vraag 2</b> (dia 5).",
           "Kopieer de pijl (Ctrl+C) en plak hem (Ctrl+V) op de andere Goed-zo-dia's. Pas telkens de koppeling aan (rechtermuisknop → <b>Koppeling bewerken</b>): naar de volgende vraag.",
-          "De pijl op de laatste Goed-zo-dia gaat naar de <b>slotdia</b>.",
+          "De pijl op de laatste Goed-zo-dia gaat naar de <b>slotdia</b> (dia 14).",
         ],
         check: [
           "Elke Goed-zo-dia heeft een Verder-pijl naar de volgende vraag.",
@@ -315,22 +504,43 @@ const LESSEN = [
         titel: "Maak de Nog-eens-knop",
         nieuw: true,
         uitleg: [
-          "Open jullie bestand in de PowerPoint-app (zoals in stap 2.1).",
-          "Ga naar de Oei-dia. Teken met <b>Invoegen</b> → <b>Vormen</b> een <b>pijl naar links</b> en typ erin: <b>Nog eens</b>.",
-          "Koppel de pijl: <b>Invoegen</b> → <b>Koppeling</b> → <b>Plaats in dit document</b> → <b>Laatst weergegeven dia</b>.",
+          "Open jullie bestand (zoals in stap 2.1).",
+          {
+            t: "Ga naar de Oei-dia. Teken met <b>Invoegen</b> → <b>Vormen</b> een <b>pijl naar links</b> en typ erin: <b>Nog eens</b>.",
+            b: { type: "dia", titel: "Oei, probeer nog eens!", titelStijl: "color:#d35400;font-size:26px;border:0", prenten: ["🙂"], vorm: { soort: "pijl-l", l: "Nog eens" }, achtergrond: "#fff3c4", uitleg: "De Nog-eens-pijl staat linksonder." },
+          },
+          {
+            t: "Klik op de rand van de pijl. Klik op <b>Invoegen</b> → <b>Actie</b> (niet Koppeling!).",
+            b: Object.assign(INVOEGEN({ actie: 1 }), { uitleg: "Invoegen → Actie (1)." }),
+          },
+          {
+            t: "Kies <b>Hyperlink naar:</b>, klik op het pijltje en kies <b>Laatst weergegeven dia</b>. Klik op <b>OK</b>.",
+            b: {
+              type: "venster", titel: "Actie-instellingen", smal: true,
+              velden: [{ html: '<div style="font-weight:600;border-bottom:2px solid #c43e1c;display:inline-block;margin-bottom:4px">Klikken met de muis</div>' }, { radio: false, l: "Geen" }, { radio: true, l: "Hyperlink naar:", acc: 1 }, { label: "", l: "Laatst weergegeven dia", menu: true, acc: 2 }, { radio: false, l: "Programma uitvoeren:" }, { check: false, l: "Geluid afspelen:" }],
+              knoppen: [{ l: "OK", acc: 3 }, "Annuleren"],
+              uitleg: "Hyperlink naar (1) → Laatst weergegeven dia (2) → OK (3).",
+            },
+          },
         ],
         tip: "\"Laatst weergegeven dia\" is slim: de kleuter gaat altijd terug naar de vraag waar hij of zij net was. Daarom heb je maar één Oei-dia nodig.",
-        check: ["De Nog-eens-pijl is gekoppeld aan Laatst weergegeven dia."],
+        check: ["De Nog-eens-pijl is via Actie gekoppeld aan Laatst weergegeven dia."],
         criterium: "Nog-eens-knop gekoppeld aan Laatst weergegeven dia.",
       },
       {
         id: "3.2",
         titel: "Maak de Start- en Speel-knop",
         uitleg: [
-          "Ga naar de titeldia. Teken met <b>Invoegen</b> → <b>Vormen</b> een <b>afgeronde rechthoek</b> en typ erin: <b>Start</b>.",
-          "Koppel de knop aan de uitlegdia (dia 2).",
-          "Ga naar de uitlegdia. Teken een knop <b>Speel!</b> en koppel die aan vraag 1.",
-          "Geef beide knoppen een opvallende kleur via <b>Vormopmaak</b> → <b>Opvulling van vorm</b>.",
+          {
+            t: "Ga naar de titeldia. Teken met <b>Invoegen</b> → <b>Vormen</b> een <b>afgeronde rechthoek</b> en typ erin: <b>Start</b>.",
+            b: { type: "dia", titel: "Handjes wassen, hoe doe jij dat?", onder: "Een quiz van Lotte en Yassin", vorm: { soort: "rond", l: "Start" }, achtergrond: "#fff3c4", uitleg: "De Start-knop onderaan de titeldia." },
+          },
+          "Koppel de knop met <b>Invoegen</b> → <b>Koppeling</b> → <b>Plaats in dit document</b> aan dia 2, de uitlegdia.",
+          "Ga naar de uitlegdia. Teken een knop <b>Speel!</b> en koppel die aan dia 3, vraag 1.",
+          {
+            t: "Geef beide knoppen een opvallende kleur: klik op de knop, ga naar het tabblad <b>Vormopmaak</b> en kies <b>Opvulling van vorm</b>.",
+            b: LINT("Vormopmaak", [G("Vormen invoegen", [KK("", "▭"), KK("", "◯"), KK("", "➡")]), G("Vormstijlen", [DUIM("", "Abc", 0, "background:#ed7d31;color:#fff"), DUIM("", "Abc", 0, "background:#70ad47;color:#fff"), KK("Opvulling van vorm", "🪣", 1, { menu: true }), KK("Omtrek van vorm", "✏️", 0, { menu: true })]), G("Grootte", [VELD("2 cm", 0, { label: "↕" })])], { tabs: TABS_VORM, uitleg: "Vormopmaak → Opvulling van vorm (1)." }),
+          },
         ],
         check: [
           "De Start-knop gaat naar de uitlegdia.",
@@ -359,10 +569,25 @@ const LESSEN = [
         nieuw: true,
         uitleg: [
           "Zet een koptelefoon met microfoon op (of ga op een rustige plaats zitten).",
-          "Ga naar vraag 1. Klik op <b>Invoegen</b> → <b>Audio</b> → <b>Audio opnemen</b>.",
-          "Klik op de rode knop en lees de vraag <b>traag en duidelijk</b> voor, alsof er een kleuter voor je staat. Klik op stop en dan op <b>OK</b>.",
+          {
+            t: "Ga naar vraag 1. Klik op <b>Invoegen</b> → <b>Audio</b> → <b>Audio opnemen</b>.",
+            b: { delen: [INVOEGEN({ audio: 1 }), { type: "menu", items: [{ l: "Audio op mijn pc…", i: "💻" }, { l: "Audio opnemen…", i: "🎙️", acc: 2 }] }], uitleg: "Invoegen → Audio (1) → Audio opnemen (2)." },
+          },
+          {
+            t: "Klik op de <b>rode bol</b> en lees de vraag <b>traag en duidelijk</b> voor, alsof er een kleuter voor je staat. Klik op het <b>vierkantje</b> om te stoppen en dan op <b>OK</b>.",
+            b: {
+              type: "venster", titel: "Geluid opnemen", smal: true,
+              velden: [{ label: "Naam:", l: "Vraag 1" }, { html: '<small style="color:#605e5c">Totale lengte geluid: 3,2</small>' }],
+              extra: '<div style="display:flex;gap:34px;font-size:24px;margin:10px 0 4px 6px"><span>▶</span><span class="acc" data-n="2" style="padding:0 4px">⏹</span><span class="acc" data-n="1" style="color:#e3001b;padding:0 4px">⏺</span></div>',
+              knoppen: [{ l: "OK", acc: 3 }, "Annuleren"],
+              uitleg: "Opnemen (1), stoppen (2), OK (3).",
+            },
+          },
           "Sleep het luidsprekertje naar de linkerbovenhoek.",
-          "Klik op het luidsprekertje en ga naar het tabblad <b>Afspelen</b>. Zet <b>Starten</b> op <b>Automatisch</b> en vink <b>Verbergen tijdens voorstelling</b> aan.",
+          {
+            t: "Klik op het luidsprekertje en ga naar het tabblad <b>Afspelen</b>. Zet <b>Starten</b> op <b>Automatisch</b> en vink <b>Verbergen tijdens voorstelling</b> aan.",
+            b: LINT("Afspelen", [G("Voorbeeld", [K("Afspelen", "▶")]), G("Bewerken", [K("Audio bijsnijden", "✂️")]), G("Audio-opties", [VELD("Automatisch", 1, { label: "Starten:", w: 150 }), CHECK("Verbergen tijdens voorstelling", 2, true), CHECK("Doorlopend afspelen", 0, false)], true)], { tabs: TABS_AUDIO, uitleg: "Starten: Automatisch (1) en Verbergen tijdens voorstelling (2)." }),
+          },
           "Doe dit voor alle 5 de vragen. Wissel af: allebei spreken jullie minstens 2 vragen in.",
         ],
         check: [
@@ -376,9 +601,15 @@ const LESSEN = [
         titel: "Laat de Goed-zo-prent bewegen",
         nieuw: true,
         uitleg: [
-          "Ga naar de eerste Goed-zo-dia en klik op de vrolijke prent.",
-          "Klik op het tabblad <b>Animaties</b> en kies <b>Stuiteren</b> (of een andere vrolijke animatie).",
-          "Zet bij <b>Begin</b> de keuze op <b>Met vorige</b>, zodat de animatie vanzelf start.",
+          {
+            t: "Ga naar de eerste Goed-zo-dia en klik op de vrolijke prent. Ga naar het tabblad <b>Animaties</b> en kies <b>Stuiteren</b>. Zet bij <b>Begin</b> de keuze op <b>Met vorige</b>, zodat de animatie vanzelf start.",
+            b: LINT("Animaties", [
+              G("Voorbeeld", [K("Voorbeeld", "▶")]),
+              G("Animatie", [DUIM("Geen", "✕"), DUIM("Verschijnen", "★"), DUIM("Vervagen", "★"), DUIM("Invliegen", "★"), DUIM("Stuiteren", "★", 1, "color:#2e8b57")]),
+              G("Geavanceerde animatie", [KK("Animatie toevoegen", "✚"), KK("Animatiedeelvenster", "▤"), KK("Animatie kopiëren", "🖌️", 3)], true),
+              G("Timing", [VELD("Met vorige", 2, { label: "Begin:", w: 140 }), VELD("02,00", 0, { label: "Duur:" })], true),
+            ], { uitleg: "Stuiteren (1), Begin: Met vorige (2). Later: Animatie kopiëren (3)." }),
+          },
           "Klik op <b>Animatie kopiëren</b> (het penseeltje) en klik dan op de prent van de volgende Goed-zo-dia. Herhaal voor alle Goed-zo-dia's.",
         ],
         tip: "Een beetje beweging is leuk, te veel maakt een kleuter onrustig. Alleen de Goed-zo-prenten krijgen een animatie.",
@@ -390,9 +621,14 @@ const LESSEN = [
         titel: "Kies een rustige overgang",
         nieuw: true,
         uitleg: [
-          "Klik op het tabblad <b>Overgangen</b>.",
-          "Kies <b>Vervagen</b>.",
-          "Klik op <b>Op alles toepassen</b>.",
+          {
+            t: "Klik op het tabblad <b>Overgangen</b>. Kies <b>Vervagen</b> en klik daarna op <b>Op alles toepassen</b>.",
+            b: LINT("Overgangen", [
+              G("Voorbeeld", [K("Voorbeeld", "▶")]),
+              G("Overgang naar deze dia", [DUIM("Geen", "▭"), DUIM("Morfen", "◐"), DUIM("Vervagen", "◌", 1), DUIM("Duwen", "⇥"), DUIM("Vegen", "⇢")]),
+              G("Timing", [VELD("Geen", 0, { label: "Geluid:" }), VELD("00,70", 0, { label: "Duur:" }), KK("Op alles toepassen", "⧉", 2)], true),
+            ], { uitleg: "Vervagen (1) en daarna Op alles toepassen (2)." }),
+          },
         ],
         check: ["Alle dia's hebben dezelfde rustige overgang."],
         criterium: "Eén rustige overgang op alle dia's.",
@@ -402,10 +638,22 @@ const LESSEN = [
         titel: "Zet de kiosk-modus aan",
         nieuw: true,
         uitleg: [
-          "Klik op het tabblad <b>Diavoorstelling</b> → <b>Diavoorstelling instellen</b>.",
-          "Kies bij Type voorstelling: <b>Bladeren bij kiosk (volledig scherm)</b>. Klik op <b>OK</b>.",
+          {
+            t: "Klik op het tabblad <b>Diavoorstelling</b> op <b>Diavoorstelling instellen</b>.",
+            b: LINT("Diavoorstelling", [G("Diavoorstelling starten", [K("Vanaf begin", "▶"), K("Vanaf huidige dia", "⏵")]), G("Instellen", [K("Diavoorstelling instellen", "⚙️", 1), K("Dia verbergen", "🚫")])], { uitleg: "Diavoorstelling → Diavoorstelling instellen (1)." }),
+          },
+          {
+            t: "Kies bij Type voorstelling: <b>Bladeren bij kiosk (volledig scherm)</b>. Klik op <b>OK</b>.",
+            b: {
+              type: "venster", titel: "Diavoorstelling instellen", smal: true,
+              velden: [{ html: "<b>Type voorstelling</b>" }, { radio: false, l: "Gepresenteerd door een spreker (volledig scherm)" }, { radio: false, l: "Bladeren door een persoon (venster)" }, { radio: true, l: "Bladeren bij kiosk (volledig scherm)", acc: 1 }],
+              knoppen: [{ l: "OK", acc: 2 }, "Annuleren"],
+              uitleg: "Bladeren bij kiosk (1) → OK (2).",
+            },
+          },
           "Druk op <b>F5</b>. Klik eens naast een prent: er gebeurt niets. De quiz gaat nu alleen verder via de prenten en knoppen, net als een echte game.",
         ],
+        tip: "Wil je de quiz stoppen in de kiosk-modus? Druk op <b>Esc</b>.",
         check: ["De kiosk-modus staat aan en naast een prent klikken doet niets."],
         criterium: "Kiosk-modus ingesteld.",
       },
@@ -414,8 +662,14 @@ const LESSEN = [
         titel: "Geef elke prent een alternatieve tekst",
         nieuw: true,
         uitleg: [
-          "Klik met de rechtermuisknop op een prent → <b>Alternatieve tekst bekijken</b>.",
-          "Typ in een paar woorden wat er op de prent staat, bv. \"kind wast handen met zeep\".",
+          {
+            t: "Klik met de rechtermuisknop op een prent en kies <b>Alternatieve tekst bekijken</b>.",
+            b: { type: "menu", smal: true, items: [{ l: "Knippen", i: "✂️" }, { l: "Kopiëren", i: "📄" }, "-", { l: "Afbeelding wijzigen", i: "🖼️", sub: true }, { l: "Koppeling bewerken", i: "🔗" }, { l: "Alternatieve tekst bekijken…", i: "💬", acc: 1 }, { l: "Grootte en positie…", i: "⛶" }], uitleg: "Rechtermuisknop op de prent → Alternatieve tekst bekijken (1)." },
+          },
+          {
+            t: "Typ rechts in een paar woorden wat er op de prent staat, bv. \"kind wast handen met zeep\".",
+            b: { type: "deelvenster", titel: "Alternatieve tekst", smal: true, inhoud: '<small style="color:#605e5c">Hoe zou je dit object en de context ervan beschrijven voor iemand die blind of slechtziend is?</small><div class="pp-invul acc" data-n="1" style="margin-top:8px;min-height:50px">kind wast handen met zeep</div>', uitleg: "Typ de beschrijving in het vak (1)." },
+          },
           "Doe dit voor de prenten van alle 5 de vragen.",
         ],
         tip: "Alternatieve tekst helpt mensen die slecht zien: hun computer leest voor wat er op de prent staat.",
@@ -427,8 +681,7 @@ const LESSEN = [
         titel: "Laatste controle en inleveren",
         uitleg: [
           "Speel jullie quiz nog één keer volledig met <b>F5</b>.",
-          "Klik op <b>Bestand</b> → <b>Opslaan</b> en sluit PowerPoint.",
-          "Kijk op OneDrive of jullie bestand er staat met de juiste naam.",
+          "Kijk of <b>Automatisch opslaan</b> nog aan staat en sluit PowerPoint.",
           "Klik hieronder op <b>Download ons rapport</b> en lever het in zoals je leerkracht vraagt.",
         ],
         check: [
